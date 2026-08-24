@@ -1,0 +1,28 @@
+@import '@pc/ui/theme.css';
+
+@source '../src';
+@source '../../../packages/ui/src';
+
+/* The dashboard is a desk tool: dense tables, wide viewport, no phone framing. */
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+.admin-table th {
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  color: var(--color-muted);
+  padding: 0.625rem 0.75rem;
+  border-bottom: 1px solid var(--color-line);
+  white-space: nowrap;
+}
+.admin-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--color-line);
+  vertical-align: middle;
+}
+.admin-table tbody tr:hover {
+  background: var(--color-canvas);
+}

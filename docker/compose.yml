@@ -1,0 +1,60 @@
+# Single VPS, in-country (decision #5). One API process, Caddy in front,
+# Litestream replicating the SQLite file off-box.
+#
+# NOT YET EXERCISED — written from the plan (§10). Validate on a scratch VPS
+# and rehearse a restore before go-live.
+name: prison-commerce
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+      - liff_build:/srv/shop:ro
+      - admin_build:/srv/admin:ro
+    depends_on:
+      - api
+
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.api
+    restart: unless-stopped
+    # Never set `deploy.replicas` or run this under cluster: one writer only.
+    env_file: ../apps/api/.env.production
+    environment:
+      NODE_ENV: production
+      DATABASE_PATH: /data/app.db
+      STORAGE_LOCAL_DIR: /data/uploads
+      COOKIE_SECURE: '1'
+    volumes:
+      - app_data:/data
+    expose:
+      - '8787'
+
+  # Continuous replication protects against disk loss. The nightly
+  # `VACUUM INTO` snapshot (see docs/RUNBOOK.md) protects against a bad
+  # migration, which is the more likely disaster — you need both.
+  litestream:
+    image: litestream/litestream:0.3
+    restart: unless-stopped
+    command: replicate -config /etc/litestream.yml
+    volumes:
+      - app_data:/data
+      - ./litestream.yml:/etc/litestream.yml:ro
+    env_file: ./litestream.env
+    depends_on:
+      - api
+
+volumes:
+  app_data:
+  caddy_data:
+  caddy_config:
+  liff_build:
+  admin_build:

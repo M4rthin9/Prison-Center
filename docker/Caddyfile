@@ -1,0 +1,53 @@
+{
+	email ops@example.go.th
+}
+
+# ── customer app (relatives) ────────────────────────────────────────────────
+shop.example.go.th {
+	root * /srv/shop
+	encode zstd gzip
+	# SPA fallback: adapter-static emits index.html as the fallback document.
+	try_files {path} /index.html
+	file_server
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		# The LINE webview needs to embed this app in Phase 7.
+		-Server
+	}
+}
+
+# ── admin dashboard ─────────────────────────────────────────────────────────
+# A login form is not the only gate: staff connect from fixed facility
+# networks, so restrict at the edge as well (§10).
+admin.example.go.th {
+	@notallowed not remote_ip 203.0.113.0/24 10.8.0.0/24
+	respond @notallowed "Not available from this network" 403
+
+	root * /srv/admin
+	encode zstd gzip
+	try_files {path} /index.html
+	file_server
+
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+}
+
+# ── api ─────────────────────────────────────────────────────────────────────
+api.example.go.th {
+	encode zstd gzip
+	reverse_proxy api:8787 {
+		header_up X-Real-IP {remote_host}
+	}
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+}

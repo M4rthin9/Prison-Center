@@ -1,0 +1,22 @@
+# syntax=docker/dockerfile:1
+#
+# Builds one of the two static front ends. Pick which with --build-arg APP=liff|admin.
+# The output is plain files; Caddy serves them, no Node at runtime.
+ARG APP=liff
+
+FROM node:22-slim AS build
+ARG APP
+ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH
+RUN corepack enable
+WORKDIR /app
+
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY packages ./packages
+COPY apps/${APP} ./apps/${APP}
+RUN pnpm install --frozen-lockfile --filter @pc/${APP}...
+RUN pnpm --filter @pc/contract build && pnpm --filter @pc/${APP} build
+
+# The build stage is the artifact: compose copies `build/` into the Caddy volume.
+FROM scratch AS export
+ARG APP
+COPY --from=build /app/apps/${APP}/build /

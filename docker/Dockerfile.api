@@ -1,0 +1,46 @@
+# syntax=docker/dockerfile:1
+#
+# Pin the base image by digest before this goes anywhere near production
+# (§10 "Box hardening"). The tag below is a placeholder for that pin.
+FROM node:22-slim AS base
+ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH
+RUN corepack enable
+
+# better-sqlite3 ships prebuilt binaries for linux/amd64; python3+build tools are
+# only needed if a prebuild is unavailable for the target platform.
+FROM base AS deps
+WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ \
+  && rm -rf /var/lib/apt/lists/*
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY packages/config/package.json ./packages/config/
+COPY packages/contract/package.json ./packages/contract/
+COPY apps/api/package.json ./apps/api/
+RUN pnpm install --frozen-lockfile --filter @pc/api... --prod=false
+
+FROM deps AS build
+COPY packages ./packages
+COPY apps/api ./apps/api
+RUN pnpm --filter @pc/contract build
+
+FROM base AS runtime
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=build /app ./
+
+# The database and uploads live on a mounted volume so they survive a rebuild.
+VOLUME ["/data"]
+ENV DATABASE_PATH=/data/app.db \
+    STORAGE_LOCAL_DIR=/data/uploads \
+    NOTIFIER_OUTBOX_PATH=/data/outbox.log \
+    PORT=8787
+
+# One writer process. Do NOT scale this service — SQLite WAL allows many
+# readers but exactly one writer, and that is the design (§10).
+USER node
+EXPOSE 8787
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s \
+  CMD node -e "fetch('http://127.0.0.1:8787/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+
+WORKDIR /app/apps/api
+CMD ["pnpm", "start"]

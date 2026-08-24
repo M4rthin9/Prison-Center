@@ -1,0 +1,22 @@
+{
+  "name": "prison-commerce",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@11.22.0",
+  "engines": { "node": ">=22.11.0" },
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "build": "turbo run build",
+    "check": "turbo run check",
+    "test": "turbo run test",
+    "db:generate": "pnpm --filter @pc/api db:generate",
+    "db:migrate": "pnpm --filter @pc/api db:migrate",
+    "db:seed": "pnpm --filter @pc/api db:seed",
+    "db:reset": "pnpm --filter @pc/api db:reset"
+  },
+  "devDependencies": {
+    "turbo": "^2.10.11",
+    "typescript": "^5.9.3",
+    "prettier": "^3.6.2"
+  }
+}

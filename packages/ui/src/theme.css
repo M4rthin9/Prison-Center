@@ -1,0 +1,66 @@
+@import 'tailwindcss';
+
+/*
+ * Shared design tokens for both front ends.
+ *
+ * Fonts: Anuphan (Thai) with Inter for Latin, per the design system. No CDN
+ * import — everything must run offline. Drop woff2 files into
+ * `packages/ui/fonts/` and add @font-face here; until then the stack falls
+ * back to whatever Thai-capable face the machine has, which renders correctly
+ * either way.
+ */
+@theme {
+  --font-sans:
+    'Anuphan', 'IBM Plex Sans Thai', 'Noto Sans Thai', 'Sarabun', 'Inter', system-ui,
+    -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Code', monospace;
+
+  /* Corrections-service palette: calm, high contrast, no marketing gradients. */
+  --color-brand-50: oklch(0.97 0.02 250);
+  --color-brand-100: oklch(0.93 0.04 250);
+  --color-brand-200: oklch(0.87 0.07 250);
+  --color-brand-300: oklch(0.78 0.11 250);
+  --color-brand-400: oklch(0.68 0.15 250);
+  --color-brand-500: oklch(0.58 0.17 250);
+  --color-brand-600: oklch(0.5 0.16 250);
+  --color-brand-700: oklch(0.42 0.13 250);
+  --color-brand-800: oklch(0.34 0.1 250);
+  --color-brand-900: oklch(0.27 0.07 250);
+
+  --color-ink: oklch(0.24 0.01 250);
+  --color-muted: oklch(0.52 0.01 250);
+  --color-line: oklch(0.9 0.005 250);
+  --color-surface: oklch(0.99 0.002 250);
+  --color-canvas: oklch(0.97 0.004 250);
+
+  --color-ok: oklch(0.62 0.15 155);
+  --color-warn: oklch(0.75 0.15 75);
+  --color-danger: oklch(0.58 0.2 25);
+
+  --radius-card: 0.875rem;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    /* Thai text needs a little more line height than the Latin default. */
+    line-height: 1.65;
+  }
+
+  body {
+    background: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 2px;
+  }
+
+  /* Number-heavy screens (satang amounts, inmate codes) read better tabular. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}

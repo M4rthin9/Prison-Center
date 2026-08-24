@@ -1,0 +1,11 @@
+@import '@pc/ui/theme.css';
+
+@source '../src';
+@source '../../../packages/ui/src';
+
+/* The customer app is a phone-first mini-app: lock the layout to a phone width
+   and keep the safe-area inset for the LINE webview's bottom bar. */
+.app-shell {
+  min-height: 100dvh;
+  padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
+}
