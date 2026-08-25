@@ -30,6 +30,23 @@ import type {
   PaymentStatus,
   UpdateFulfillmentInput
 } from './orders.js'
+import type {
+  CreatePaymentChannelInput,
+  CreatePaymentInput,
+  PaymentChannel,
+  PaymentChannelPublic,
+  PaymentDetail,
+  PaymentPurpose,
+  PaymentRail,
+  PaymentState,
+  PaymentSummary,
+  PaymentView,
+  RefundPaymentInput,
+  RejectPaymentInput,
+  SlipUploadResult,
+  UpdatePaymentChannelInput,
+  VerifyPaymentInput
+} from './payments.js'
 import type { PublicSettings } from './settings.js'
 
 interface Page<T> {
@@ -236,7 +253,24 @@ export function createApiClient(opts: ClientOptions) {
         raw<OrderDetail>('/orders', { method: 'POST', body: input }),
       list: (query: { cursor?: string; limit?: number; status?: FulfillmentStatus } = {}) =>
         raw<Page<OrderSummary>>('/orders', { query }),
-      get: (id: string) => raw<OrderDetail>(`/orders/${id}`)
+      get: (id: string) => raw<OrderDetail>(`/orders/${id}`),
+      /** Asking twice while the QR is alive returns the same one, not a second. */
+      pay: (id: string, input: CreatePaymentInput = {}) =>
+        raw<PaymentView>(`/orders/${id}/payment`, { method: 'POST', body: input })
+    },
+
+    payments: {
+      channels: (query: { prisonId: string; purpose?: PaymentPurpose }) =>
+        raw<{ items: PaymentChannelPublic[] }>('/payment-channels', { query }),
+      list: (query: { cursor?: string; limit?: number } = {}) =>
+        raw<Page<PaymentView>>('/payments', { query }),
+      get: (id: string) => raw<PaymentView>(`/payments/${id}`),
+      uploadSlip(id: string, file: File | Blob, filename = 'slip.jpg') {
+        const form = new FormData()
+        form.append('file', file, filename)
+        return raw<SlipUploadResult>(`/payments/${id}/slip`, { method: 'POST', form })
+      },
+      slipUrl: (id: string) => url(`/payments/${id}/slip`)
     },
 
     admin: {
@@ -295,6 +329,40 @@ export function createApiClient(opts: ClientOptions) {
         get: (id: string) => raw<OrderDetail>(`/admin/orders/${id}`),
         setFulfillment: (id: string, input: UpdateFulfillmentInput) =>
           raw<OrderDetail>(`/admin/orders/${id}/fulfillment`, { method: 'PATCH', body: input })
+      },
+
+      paymentChannels: {
+        list: (query: { prisonId?: string; includeInactive?: boolean } = {}) =>
+          raw<{ items: PaymentChannel[] }>('/admin/payment-channels', { query }),
+        create: (input: CreatePaymentChannelInput) =>
+          raw<PaymentChannel>('/admin/payment-channels', { method: 'POST', body: input }),
+        update: (id: string, input: UpdatePaymentChannelInput) =>
+          raw<PaymentChannel>(`/admin/payment-channels/${id}`, { method: 'PATCH', body: input })
+      },
+
+      payments: {
+        list: (
+          query: {
+            prisonId?: string
+            status?: PaymentState
+            rail?: PaymentRail
+            purpose?: PaymentPurpose
+            channelId?: string
+            q?: string
+            from?: number
+            to?: number
+            cursor?: string
+            limit?: number
+          } = {}
+        ) => raw<Page<PaymentSummary>>('/admin/payments', { query }),
+        get: (id: string) => raw<PaymentDetail>(`/admin/payments/${id}`),
+        verify: (id: string, input: VerifyPaymentInput) =>
+          raw<PaymentDetail>(`/admin/payments/${id}/verify`, { method: 'POST', body: input }),
+        reject: (id: string, input: RejectPaymentInput) =>
+          raw<PaymentDetail>(`/admin/payments/${id}/reject`, { method: 'POST', body: input }),
+        refund: (id: string, input: RefundPaymentInput) =>
+          raw<PaymentDetail>(`/admin/payments/${id}/refund`, { method: 'POST', body: input }),
+        slipUrl: (id: string) => url(`/admin/payments/${id}/slip`)
       }
     },
 

@@ -2,10 +2,12 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
 import { and, desc, eq, sql } from 'drizzle-orm'
 import {
   CreateOrderInput,
+  CreatePaymentInput,
   FulfillmentStatus,
   OrderDetail,
   OrderSummary,
   PageQuery,
+  PaymentView,
   Ulid,
   pageOf
 } from '@pc/contract'
@@ -19,6 +21,7 @@ import { requestContext } from '../../lib/auth/session.js'
 import { blockUntilPasswordChanged, requireCustomer } from '../../middleware/auth.js'
 import type { AppEnv } from '../../types.js'
 import { itemCounts, orderDetail, orderSummaryQuery, placeOrder } from './service.js'
+import { createOrderPayment } from '../payments/service.js'
 
 export function createOrderRoutes() {
   const app = new OpenAPIHono<AppEnv>({ defaultHook })
@@ -90,6 +93,32 @@ export function createOrderRoutes() {
         },
         200
       )
+    }
+  )
+
+  app.openapi(
+    createRoute({
+      method: 'post',
+      path: '/{id}/payment',
+      tags: ['orders'],
+      summary: 'ขอ QR ชำระเงินของคำสั่งซื้อ',
+      description:
+        'ยอดมาจากคำสั่งซื้อเสมอ ไคลเอนต์เลือกได้แค่ช่องทาง — ' +
+        'ขอซ้ำระหว่างที่ QR เดิมยังไม่หมดอายุจะได้ QR เดิมกลับไป ไม่ใช่รายการใหม่',
+      security: bearerAuth,
+      request: { params: z.object({ id: Ulid }), body: jsonBody(CreatePaymentInput) },
+      responses: { 201: jsonRes(PaymentView, 'รายการชำระเงิน'), ...commonErrors }
+    }),
+    async (c) => {
+      const me = c.get('customer')!
+      const ctx = requestContext(c)
+      const payment = await createOrderPayment(
+        me.id,
+        c.req.valid('param').id,
+        c.req.valid('json'),
+        { ip: ctx.ip, userAgent: ctx.userAgent }
+      )
+      return c.json(payment, 201)
     }
   )
 

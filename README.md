@@ -6,12 +6,14 @@ deposits, e-letters, visit booking, payments and reports — all sliced by
 
 Three deployables, one database, no cloud primitives. See [`Plan.md`](Plan.md)
 for the full design, [`docs/PHASE-0.md`](docs/PHASE-0.md) for the foundation and
-[`docs/PHASE-1.md`](docs/PHASE-1.md) for catalog and orders.
+[`docs/PHASE-1.md`](docs/PHASE-1.md) for catalog and orders and
+[`docs/PHASE-2.md`](docs/PHASE-2.md) for payments.
 
-**Status: Phase 1 (Catalog + Orders) complete.** A relative can place an unpaid
-order end to end and staff can fulfil it. Phase 2 (Payments) is not started;
-Phase 0b (inmate import) is still outstanding — inmate records are seeded and
-editable, but there is no XLSX/CSV importer yet.
+**Status: Phase 2 (Payments) complete.** A relative places an order, gets a
+PromptPay QR on either rail, uploads a slip, and staff settle or reject it —
+one slip settles exactly one payment, and a wrong-amount slip is refused. Phase
+3 (Deposits) is not started; Phase 0b (inmate import) is still outstanding —
+inmate records are seeded and editable, but there is no XLSX/CSV importer yet.
 
 ---
 
@@ -53,8 +55,11 @@ Password is `password123` for all of them.
 | Admin :5174 | `klp.admin` | เรือนจำกลางคลองเปรม only |
 | Admin :5174 | `bkw.admin` | เรือนจำกลางบางขวาง only |
 
-The seed also creates 4 shops, 30 products across 5 categories, and 2 orders
-placed through the real ordering service.
+The seed also creates 4 shops, 30 products across 5 categories, 2 orders placed
+through the real ordering service, and 4 payment channels — a PromptPay
+credit-transfer (tag-29) rail per facility, a bank-transfer account, and an
+inactive department-wide bill-payment (tag-30) channel waiting on a real Biller
+ID.
 
 ### Commands
 

@@ -21,6 +21,7 @@ import { hashPassword } from '../../lib/password.js'
 import { setSetting } from '../../modules/settings/service.js'
 import { placeOrder } from '../../modules/orders/service.js'
 import { seedCatalog } from './catalog.js'
+import { seedPaymentChannels } from './payments.js'
 
 /**
  * Dev fixtures. Deterministic and idempotent: running it twice leaves the same
@@ -285,6 +286,10 @@ export async function seed(db: Db) {
 
   const catalog = seedCatalog(db, prisonIds)
 
+  /* ── payment channels (เฟส 2) ───────────────────────────────────────── */
+
+  const paymentSeed = seedPaymentChannels(db, prisonIds)
+
   /* ── two orders, placed through the real service ────────────────────── */
 
   // Going through placeOrder rather than inserting rows keeps the fixtures
@@ -341,6 +346,7 @@ export async function seed(db: Db) {
     categories: catalog.categories,
     shops: catalog.shops,
     products: catalog.products,
+    paymentChannels: paymentSeed.channels,
     orders: seededOrders.length
   }
 }

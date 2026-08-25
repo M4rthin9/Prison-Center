@@ -35,3 +35,20 @@ export function nextOrderNo(
   const seq = nextSequence(`order:${prisonId}`, period, db)
   return `${prisonCode}-${period}-${String(seq).padStart(4, '0')}`
 }
+
+/**
+ * `{PRISON_CODE}-P{YYMM}-{SEQ}` (§4.3), e.g. `KLP-P2508-0001`. The `P` keeps a
+ * payment number from ever being mistaken for an order number in a bank
+ * statement export, and the dash-stripped form (`KLPP25080001`, 12 chars) is
+ * what goes into the tag-30 Ref1 field.
+ */
+export function nextPaymentNo(
+  prisonId: string,
+  prisonCode: string,
+  db: DbOrTx = defaultDb(),
+  at = now()
+): string {
+  const period = bangkokMonth(at).replace('-', '').slice(2)
+  const seq = nextSequence(`payment:${prisonId}`, period, db)
+  return `${prisonCode}-P${period}-${String(seq).padStart(4, '0')}`
+}

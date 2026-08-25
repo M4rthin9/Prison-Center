@@ -102,10 +102,23 @@
 
     <Card title="การชำระเงิน">
       <p class="text-ink">{PAYMENT_STATUS_LABEL[order.paymentStatus]}</p>
-      {#if order.paymentStatus === 'unpaid'}
+      {#if order.paymentStatus === 'paid'}
+        <p class="mt-1 text-sm text-muted">ยืนยันเมื่อ {formatDateTime(order.paidAt)}</p>
+      {:else if order.paymentStatus === 'awaiting_verify'}
         <p class="mt-1 text-sm text-muted">
-          การชำระเงินผ่าน QR พร้อมเพย์จะเปิดให้ใช้งานในเฟส 2 — ระหว่างนี้กรุณาติดต่อเจ้าหน้าที่
+          เจ้าหน้าที่กำลังตรวจสอบสลิปของคุณ ระบบจะแจ้งเตือนเมื่อตรวจสอบเสร็จ
         </p>
+        <a class="mt-3 inline-block text-sm text-brand-700" href="/orders/{order.id}/pay">
+          ดูสถานะ / แนบสลิปใหม่ →
+        </a>
+      {:else if order.fulfillmentStatus !== 'cancelled'}
+        <a
+          class="mt-3 inline-flex h-11 w-full items-center justify-center rounded-xl
+                 bg-brand-600 font-medium text-white"
+          href="/orders/{order.id}/pay"
+        >
+          ชำระเงินด้วย QR พร้อมเพย์
+        </a>
       {/if}
     </Card>
   {/if}

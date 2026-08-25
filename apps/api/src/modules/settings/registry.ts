@@ -130,6 +130,18 @@ export const REGISTRY = {
   'payment.salt.enabled': def(z.boolean(), true, {
     label: 'เติมเศษสตางค์เพื่อกระทบยอด (PromptPay tag-29)'
   }),
+  // A relative who transfers at 23:58 on a 30-minute QR has still paid. The
+  // grace window is what stops staff having to reject an honest slip.
+  'payment.slip.grace_minutes': def(z.number().int().min(0).max(2880), 120, {
+    scope: 'prison',
+    label: 'ผ่อนผันเวลาโอนหลัง QR หมดอายุ (นาที)'
+  }),
+  // Off by default: the receiving bank on a slip photograph is free text and a
+  // facility with one account per แดน will trip over it constantly.
+  'payment.slip.require_bank_match': def(z.boolean(), false, {
+    scope: 'prison',
+    label: 'ตรวจสอบธนาคาร/เลขบัญชีปลายทางกับสลิป'
+  }),
 
   'inmate.sync.source': def(z.string().max(60), 'doc_xlsx', {
     label: 'แหล่งข้อมูลผู้ต้องขัง'

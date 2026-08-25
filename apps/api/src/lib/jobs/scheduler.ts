@@ -1,6 +1,7 @@
 import { hostname } from 'node:os'
 import { db } from '../../db/client.js'
 import { customerRealm, staffRealm } from '../auth/realms.js'
+import { expireDuePayments } from '../../modules/payments/service.js'
 import { MINUTE, now } from '../time.js'
 import {
   claimNext,
@@ -20,6 +21,10 @@ export type JobHandler = (job: JobRow) => Promise<unknown> | unknown
  * scheduler itself.
  */
 export const handlers: Partial<Record<JobKind, JobHandler>> = {
+  // A QR whose window has closed must stop being payable — but only while it
+  // is still `pending`. A payment with a slip on it is waiting on staff.
+  'payment.expire': () => ({ expired: expireDuePayments() }),
+
   'session.purge': () => {
     const at = now()
     customerRealm.purgeExpiredSessions(db(), at)

@@ -35,6 +35,7 @@ import {
   orderDetail,
   orderSummaryQuery
 } from './service.js'
+import { voidLivePaymentsForOrder } from '../payments/service.js'
 
 export function createAdminOrderRoutes() {
   const app = new OpenAPIHono<AppEnv>({ defaultHook })
@@ -153,10 +154,14 @@ export function createAdminOrderRoutes() {
 
       if (status === 'cancelled') {
         if (!reason?.trim()) throw badRequest('ต้องระบุเหตุผลที่ยกเลิก')
-        // Refunds are a Phase 2 concern; until the payment spine exists, a paid
-        // order must not be cancelled from this screen.
-        if (before.paymentStatus === 'paid' || before.paymentStatus === 'awaiting_verify') {
-          throw conflict('คำสั่งซื้อที่ชำระเงินแล้วต้องดำเนินการคืนเงินก่อน (เฟส 2)')
+        // Money first, status second. A slip in the queue has to be decided and
+        // a settled payment has to be refunded before the order can go away —
+        // otherwise the ledger and the order list disagree.
+        if (before.paymentStatus === 'awaiting_verify') {
+          throw conflict('มีสลิปรอตรวจสอบอยู่ ให้ยืนยันหรือปฏิเสธสลิปก่อนยกเลิกคำสั่งซื้อ')
+        }
+        if (before.paymentStatus === 'paid') {
+          throw conflict('คำสั่งซื้อที่ชำระเงินแล้วต้องบันทึกการคืนเงินก่อนยกเลิก')
         }
       }
 
@@ -173,6 +178,9 @@ export function createAdminOrderRoutes() {
         })
         .where(eq(orders.id, id))
         .run()
+
+      // An unpaid QR for a cancelled order must stop being payable.
+      if (status === 'cancelled') voidLivePaymentsForOrder(id)
 
       const after = orderDetail(id)
       const ctx = requestContext(c)
