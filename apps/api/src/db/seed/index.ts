@@ -1,9 +1,11 @@
-import { sql } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { createDb, runMigrations, type Db } from '../client.js'
 import { env } from '../../env.js'
 import {
   categories,
   counters,
+  depositCards,
+  deposits,
   customerInmates,
   customers,
   inmates,
@@ -20,6 +22,11 @@ import {
 import { hashPassword } from '../../lib/password.js'
 import { setSetting } from '../../modules/settings/service.js'
 import { placeOrder } from '../../modules/orders/service.js'
+import {
+  createDeposit,
+  requestDepositCard,
+  reviewDepositCard
+} from '../../modules/deposits/service.js'
 import { seedCatalog } from './catalog.js'
 import { seedPaymentChannels } from './payments.js'
 
@@ -104,6 +111,8 @@ export async function seed(db: Db) {
       .get()?.n ?? 0
   if (existing > 0) {
     console.log('• database already seeded — clearing dev data first')
+    db.delete(deposits).run()
+    db.delete(depositCards).run()
     db.delete(orderItems).run()
     db.delete(orders).run()
     db.delete(counters).run()
@@ -330,6 +339,31 @@ export async function seed(db: Db) {
     )
   ]
 
+  /* ── deposits (เฟส 3) ───────────────────────────────────────────────── */
+
+  // Through the real services, so the fixtures are numbered, gated and priced
+  // exactly like a deposit a relative would make.
+  const depositCustomer = customerIds['0812345678']!
+  const approvedCard = requestDepositCard(depositCustomer, { inmateId: inmateIds[0]! }, {}, db)
+  const superAdminId = db
+    .select({ id: staff.id })
+    .from(staff)
+    .where(eq(staff.username, 'superadmin'))
+    .get()!.id
+  await reviewDepositCard(superAdminId, approvedCard.id, { status: 'approved' }, {}, db)
+
+  // A second, still-pending card request so the review queue is not empty.
+  requestDepositCard(customerIds['0823456789']!, { inmateId: inmateIds[2]! }, {}, db)
+
+  const seededDeposits = [
+    await createDeposit(
+      depositCustomer,
+      { inmateId: inmateIds[0]!, amountSatang: 100000, note: 'ฝากค่าใช้จ่ายประจำเดือน' },
+      {},
+      db
+    )
+  ]
+
   /* ── per-prison settings overrides ──────────────────────────────────── */
 
   for (const p of PRISONS) {
@@ -347,7 +381,9 @@ export async function seed(db: Db) {
     shops: catalog.shops,
     products: catalog.products,
     paymentChannels: paymentSeed.channels,
-    orders: seededOrders.length
+    orders: seededOrders.length,
+    depositCards: 2,
+    deposits: seededDeposits.length
   }
 }
 

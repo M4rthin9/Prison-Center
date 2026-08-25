@@ -52,3 +52,31 @@ export function nextPaymentNo(
   const seq = nextSequence(`payment:${prisonId}`, period, db)
   return `${prisonCode}-P${period}-${String(seq).padStart(4, '0')}`
 }
+
+/**
+ * `{PRISON_CODE}-D{YYMM}-{SEQ}` (§4.4) — `KLP-D2508-0001`. Deposits get their
+ * own letter for the same reason payments do: a number read aloud over the
+ * phone to a relative must be unambiguous about which thing it identifies.
+ */
+export function nextDepositNo(
+  prisonId: string,
+  prisonCode: string,
+  db: DbOrTx = defaultDb(),
+  at = now()
+): string {
+  const period = bangkokMonth(at).replace('-', '').slice(2)
+  const seq = nextSequence(`deposit:${prisonId}`, period, db)
+  return `${prisonCode}-D${period}-${String(seq).padStart(4, '0')}`
+}
+
+/** `{PRISON_CODE}-C{YYMM}-{SEQ}` — the deposit card, allocated on approval. */
+export function nextDepositCardNo(
+  prisonId: string,
+  prisonCode: string,
+  db: DbOrTx = defaultDb(),
+  at = now()
+): string {
+  const period = bangkokMonth(at).replace('-', '').slice(2)
+  const seq = nextSequence(`deposit_card:${prisonId}`, period, db)
+  return `${prisonCode}-C${period}-${String(seq).padStart(4, '0')}`
+}

@@ -34,6 +34,7 @@ import {
 import type { AppEnv } from '../../types.js'
 import {
   channelValues,
+  depositNosFor,
   orderNosFor,
   paymentDetail,
   paymentSummaryQuery,
@@ -270,9 +271,14 @@ export function createAdminPaymentRoutes() {
 
       const page = paginate(rows, q.limit, (r) => [r.createdAt, r.id])
       const orderNos = orderNosFor(page.items, db())
+      const depositNos = depositNosFor(page.items, db())
       return c.json(
         {
-          items: page.items.map((r) => ({ ...r, orderNo: orderNos.get(r.purposeId) ?? null })),
+          items: page.items.map((r) => ({
+            ...r,
+            orderNo: orderNos.get(r.purposeId) ?? null,
+            depositNo: depositNos.get(r.purposeId) ?? null
+          })),
           nextCursor: page.nextCursor
         },
         200

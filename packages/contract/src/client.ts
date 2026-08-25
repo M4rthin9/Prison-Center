@@ -8,7 +8,18 @@ import type {
   SessionResponse,
   UpdateMeInput
 } from './auth.js'
-import type { PrisonDetail, PrisonSummary } from './facility.js'
+import type { InmateStatus, PrisonDetail, PrisonSummary } from './facility.js'
+import type {
+  CreateInmateInput,
+  ImportPreview,
+  ImportRowResult,
+  ImportRowView,
+  ImportRunSummary,
+  InmateRow,
+  MissingPolicy,
+  TransferInmateInput,
+  UpdateInmateInput
+} from './inmates.js'
 import type {
   Category,
   CreateCategoryInput,
@@ -47,6 +58,18 @@ import type {
   UpdatePaymentChannelInput,
   VerifyPaymentInput
 } from './payments.js'
+import type {
+  CreateDepositCardInput,
+  CreateDepositInput,
+  DepositCard,
+  DepositCardStatus,
+  DepositDetail,
+  DepositStatus,
+  DepositSummary,
+  DepositSummaryTotals,
+  ReviewDepositCardInput,
+  ReviewDepositInput
+} from './deposits.js'
 import type { PublicSettings } from './settings.js'
 
 interface Page<T> {
@@ -273,6 +296,22 @@ export function createApiClient(opts: ClientOptions) {
       slipUrl: (id: string) => url(`/payments/${id}/slip`)
     },
 
+    deposits: {
+      /** Creates the deposit *and* its QR in one call. */
+      create: (input: CreateDepositInput) =>
+        raw<DepositDetail>('/deposits', { method: 'POST', body: input }),
+      list: (query: { cursor?: string; limit?: number; status?: DepositStatus } = {}) =>
+        raw<Page<DepositSummary>>('/deposits', { query }),
+      get: (id: string) => raw<DepositDetail>(`/deposits/${id}`),
+      /** A fresh QR for the same deposit — never a second deposit. */
+      pay: (id: string, input: { channelId?: string } = {}) =>
+        raw<DepositDetail>(`/deposits/${id}/payment`, { method: 'POST', body: input }),
+      cancel: (id: string) => raw<DepositDetail>(`/deposits/${id}/cancel`, { method: 'POST' }),
+      cards: () => raw<{ items: DepositCard[] }>('/deposit-cards'),
+      requestCard: (input: CreateDepositCardInput) =>
+        raw<DepositCard>('/deposit-cards', { method: 'POST', body: input })
+    },
+
     admin: {
       me: () => raw<AdminMeResponse>('/admin/me'),
 
@@ -329,6 +368,83 @@ export function createApiClient(opts: ClientOptions) {
         get: (id: string) => raw<OrderDetail>(`/admin/orders/${id}`),
         setFulfillment: (id: string, input: UpdateFulfillmentInput) =>
           raw<OrderDetail>(`/admin/orders/${id}/fulfillment`, { method: 'PATCH', body: input })
+      },
+
+      inmates: {
+        list: (
+          query: {
+            prisonId?: string
+            zoneId?: string
+            status?: InmateStatus
+            q?: string
+            includeDeleted?: boolean
+            cursor?: string
+            limit?: number
+          } = {}
+        ) => raw<Page<InmateRow>>('/admin/inmates', { query }),
+        get: (id: string) => raw<InmateRow>(`/admin/inmates/${id}`),
+        create: (input: CreateInmateInput) =>
+          raw<InmateRow>('/admin/inmates', { method: 'POST', body: input }),
+        update: (id: string, input: UpdateInmateInput) =>
+          raw<InmateRow>(`/admin/inmates/${id}`, { method: 'PATCH', body: input }),
+        transfer: (id: string, input: TransferInmateInput) =>
+          raw<InmateRow>(`/admin/inmates/${id}/transfer`, { method: 'POST', body: input }),
+        remove: (id: string) => raw<InmateRow>(`/admin/inmates/${id}`, { method: 'DELETE' }),
+        restore: (id: string) =>
+          raw<InmateRow>(`/admin/inmates/${id}/restore`, { method: 'POST' }),
+
+        /** Step one: never writes. The preview is the diff a human signs off. */
+        dryRun(
+          file: File | Blob,
+          opts: {
+            prisonId?: string
+            source?: string
+            createZones?: boolean
+            missingPolicy?: MissingPolicy
+            filename?: string
+          } = {}
+        ) {
+          const form = new FormData()
+          form.append('file', file, opts.filename ?? 'inmates.xlsx')
+          if (opts.prisonId) form.append('prisonId', opts.prisonId)
+          if (opts.source) form.append('source', opts.source)
+          form.append('createZones', String(opts.createZones ?? false))
+          form.append('missingPolicy', opts.missingPolicy ?? 'ignore')
+          return raw<ImportPreview>('/admin/inmates/import', { method: 'POST', form })
+        },
+        apply: (runId: string) =>
+          raw<ImportPreview>(`/admin/inmates/import/${runId}/apply`, { method: 'POST' }),
+        runs: (query: { prisonId?: string; limit?: number } = {}) =>
+          raw<{ items: ImportRunSummary[] }>('/admin/inmates/import-runs', { query }),
+        run: (runId: string, query: { result?: ImportRowResult; limit?: number } = {}) =>
+          raw<{ run: ImportRunSummary; rows: ImportRowView[] }>(
+            `/admin/inmates/import-runs/${runId}`,
+            { query }
+          ),
+        errorReportUrl: (runId: string) => url(`/admin/inmates/import-runs/${runId}/errors.xlsx`)
+      },
+
+      deposits: {
+        list: (
+          query: {
+            prisonId?: string
+            status?: DepositStatus
+            q?: string
+            from?: number
+            to?: number
+            cursor?: string
+            limit?: number
+          } = {}
+        ) => raw<Page<DepositSummary>>('/admin/deposits', { query }),
+        get: (id: string) => raw<DepositDetail>(`/admin/deposits/${id}`),
+        review: (id: string, input: ReviewDepositInput) =>
+          raw<DepositDetail>(`/admin/deposits/${id}/review`, { method: 'POST', body: input }),
+        summary: (query: { prisonId?: string; from?: number; to?: number } = {}) =>
+          raw<DepositSummaryTotals>('/admin/deposits/summary', { query }),
+        cards: (query: { prisonId?: string; status?: DepositCardStatus; limit?: number } = {}) =>
+          raw<{ items: DepositCard[] }>('/admin/deposit-cards', { query }),
+        reviewCard: (id: string, input: ReviewDepositCardInput) =>
+          raw<DepositCard>(`/admin/deposit-cards/${id}/review`, { method: 'POST', body: input })
       },
 
       paymentChannels: {

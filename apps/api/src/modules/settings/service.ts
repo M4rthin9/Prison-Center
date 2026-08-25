@@ -166,6 +166,11 @@ export function publicSettings(opts: { prisonId?: string | null; db?: Db } = {})
       bookingCutoffHours: g('visit.booking_cutoff_hours')
     },
     payment: { qrTtlMinutes: g('payment.qr.ttl_minutes') },
+    deposit: {
+      minSatang: g('deposit.min_satang'),
+      maxSatang: g('deposit.max_satang'),
+      requireCard: g('deposit.require_card')
+    },
     features: { lineLogin: g('features.line_login') }
   }
 }

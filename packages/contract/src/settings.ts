@@ -18,6 +18,11 @@ export const PublicSettings = z.object({
   }),
   visit: z.object({ horizonWeeks: z.number().int(), bookingCutoffHours: z.number().int() }),
   payment: z.object({ qrTtlMinutes: z.number().int() }),
+  deposit: z.object({
+    minSatang: z.number().int(),
+    maxSatang: z.number().int(),
+    requireCard: z.boolean()
+  }),
   features: z.object({ lineLogin: z.boolean() })
 })
 export type PublicSettings = z.infer<typeof PublicSettings>

@@ -11,6 +11,7 @@ import {
 import { db as defaultDb, type Db, type DbOrTx } from '../../db/client.js'
 import {
   customers,
+  deposits,
   orders,
   paymentChannels,
   payments,
@@ -38,6 +39,14 @@ import { decodeMiniQr, normalizeSlip, qrDataUrl } from '../../lib/payments/slip.
 import { normalizeTransRef, transRefTaken, verifierFor } from '../../lib/payments/verifier.js'
 import { enqueue } from '../../lib/jobs/queue.js'
 import { getSetting } from '../settings/service.js'
+// One-way dependency: `deposits/status.ts` holds the deposit's side of a
+// payment event and imports nothing back from here, so the spine stays generic.
+import {
+  onDepositPaymentRefunded,
+  onDepositPaymentRejected,
+  onDepositPaymentVerified,
+  onDepositSlipUploaded
+} from '../deposits/status.js'
 
 export interface PaymentContext {
   ip?: string | null
@@ -163,6 +172,17 @@ function orderNoOf(row: PaymentRow, db: DbOrTx): string | null {
   )
 }
 
+function depositNoOf(row: PaymentRow, db: DbOrTx): string | null {
+  if (row.purpose !== 'deposit') return null
+  return (
+    db
+      .select({ depositNo: deposits.depositNo })
+      .from(deposits)
+      .where(eq(deposits.id, row.purposeId))
+      .get()?.depositNo ?? null
+  )
+}
+
 export async function toPaymentView(row: PaymentRow, db: Db = defaultDb()): Promise<PaymentView> {
   const channel = db
     .select()
@@ -176,6 +196,7 @@ export async function toPaymentView(row: PaymentRow, db: Db = defaultDb()): Prom
     purpose: row.purpose,
     purposeId: row.purposeId,
     orderNo: orderNoOf(row, db),
+    depositNo: depositNoOf(row, db),
     rail: row.rail,
     channelId: row.channelId,
     channelName: channel?.displayName ?? '',
@@ -248,6 +269,23 @@ export function orderNosFor(rows: { purpose: string; purposeId: string }[], db: 
   )
 }
 
+/** Deposit numbers for a page of payments — same one-query rule as orders. */
+export function depositNosFor(
+  rows: { purpose: string; purposeId: string }[],
+  db: Db = defaultDb()
+) {
+  const ids = rows.filter((r) => r.purpose === 'deposit').map((r) => r.purposeId)
+  if (ids.length === 0) return new Map<string, string>()
+  return new Map(
+    db
+      .select({ id: deposits.id, depositNo: deposits.depositNo })
+      .from(deposits)
+      .where(inArray(deposits.id, ids))
+      .all()
+      .map((r) => [r.id, r.depositNo] as const)
+  )
+}
+
 export function paymentDetail(paymentId: string, db: Db = defaultDb()) {
   const row = db.select().from(payments).where(eq(payments.id, paymentId)).get()
   if (!row) throw notFound('ไม่พบรายการชำระเงิน')
@@ -271,6 +309,7 @@ export function paymentDetail(paymentId: string, db: Db = defaultDb()) {
       purpose: row.purpose,
       purposeId: row.purposeId,
       orderNo: orderNoOf(row, db),
+      depositNo: depositNoOf(row, db),
       prisonId: row.prisonId,
       prisonName: prison?.nameTh ?? null,
       rail: row.rail,
@@ -366,42 +405,46 @@ export interface CreateOrderPaymentInput {
 }
 
 /**
- * One live payment per order at a time. Asking again while a QR is still valid
- * returns that same QR rather than burning a second salt — a relative who
+ * Everything a payment needs that is specific to what is being paid for. The
+ * spine below knows nothing else: an order and a deposit differ only in where
+ * the amount is read from and what reference the tag-30 payload carries.
+ */
+export interface PaymentSpec {
+  purpose: PaymentPurpose
+  purposeId: string
+  customerId: string
+  prisonId: string
+  amountSatang: number
+  /** Feeds `ref1_mode = inmate_code` on a tag-30 channel. */
+  inmateCode: string | null
+  channelId?: string
+  /** Audit label, so the trail says which flow created this payment. */
+  action?: string
+}
+
+/**
+ * One live payment per thing being paid for. Asking again while a QR is still
+ * valid returns that same QR rather than burning a second salt — a relative who
  * refreshes the pay screen has not started a second payment.
  */
-export async function createOrderPayment(
-  customerId: string,
-  orderId: string,
-  input: CreateOrderPaymentInput,
+export async function createPaymentFor(
+  spec: PaymentSpec,
   ctx: PaymentContext = {},
   database: Db = defaultDb()
 ): Promise<PaymentView> {
   const at = now()
+  if (spec.amountSatang <= 0) throw badRequest('ยอดชำระต้องมากกว่า 0')
 
-  const order = database.select().from(orders).where(eq(orders.id, orderId)).get()
-  if (!order) throw notFound('ไม่พบคำสั่งซื้อ')
-  if (order.customerId !== customerId) throw forbidden('ไม่มีสิทธิ์เข้าถึงคำสั่งซื้อนี้')
-  if (order.fulfillmentStatus === 'cancelled') throw conflict('คำสั่งซื้อนี้ถูกยกเลิกแล้ว')
-  if (!PAYABLE_ORDER_STATES.has(order.paymentStatus)) {
-    throw conflict(
-      order.paymentStatus === 'awaiting_verify'
-        ? 'มีสลิปที่รอเจ้าหน้าที่ตรวจสอบอยู่แล้ว'
-        : 'คำสั่งซื้อนี้ชำระเงินเรียบร้อยแล้ว'
-    )
-  }
-  if (order.totalSatang <= 0) throw badRequest('ยอดชำระต้องมากกว่า 0')
-
-  const available = channelsFor(order.prisonId, 'order', database)
+  const available = channelsFor(spec.prisonId, spec.purpose, database)
   if (available.length === 0) throw conflict('เรือนจำนี้ยังไม่ได้เปิดช่องทางชำระเงิน')
 
-  const channel = input.channelId
-    ? available.find((c) => c.id === input.channelId)
+  const channel = spec.channelId
+    ? available.find((c) => c.id === spec.channelId)
     : (available.find(
         (c) =>
           c.id ===
           getSetting('payment.channel_default', {
-            prisonId: order.prisonId,
+            prisonId: spec.prisonId,
             db: database
           })
       ) ?? available[0])
@@ -412,8 +455,8 @@ export async function createOrderPayment(
     .from(payments)
     .where(
       and(
-        eq(payments.purpose, 'order'),
-        eq(payments.purposeId, orderId),
+        eq(payments.purpose, spec.purpose),
+        eq(payments.purposeId, spec.purposeId),
         inArray(payments.status, [...LIVE_STATES])
       )
     )
@@ -434,8 +477,12 @@ export async function createOrderPayment(
       .run()
   }
 
-  const customer = database.select().from(customers).where(eq(customers.id, customerId)).get()
-  const prison = database.select().from(prisons).where(eq(prisons.id, order.prisonId)).get()
+  const customer = database
+    .select()
+    .from(customers)
+    .where(eq(customers.id, spec.customerId))
+    .get()
+  const prison = database.select().from(prisons).where(eq(prisons.id, spec.prisonId)).get()
   if (!prison) throw notFound('ไม่พบเรือนจำ')
 
   const ttl = channel.ttlMinutes || getSetting('payment.qr.ttl_minutes', { db: database })
@@ -446,8 +493,8 @@ export async function createOrderPayment(
   // writes, so allocation and insert are one transaction (§4.3).
   const paymentId = database.transaction(
     (tx) => {
-      const salt = saltingOn ? allocateSalt(channel.id, order.totalSatang, tx) : 0
-      const charge = order.totalSatang + salt
+      const salt = saltingOn ? allocateSalt(channel.id, spec.amountSatang, tx) : 0
+      const charge = spec.amountSatang + salt
       if (
         !saltingOn &&
         !chargeIsFree(channel.id, charge, tx) &&
@@ -461,7 +508,7 @@ export async function createOrderPayment(
       const paymentNo = nextPaymentNo(prison.id, prison.code, tx, at)
       const refCtx = {
         paymentNo,
-        inmateCode: order.inmateCodeSnapshot,
+        inmateCode: spec.inmateCode,
         phone: customer?.phone ?? null
       }
       const ref1 = refValue(channel.ref1Mode, refCtx)
@@ -472,13 +519,13 @@ export async function createOrderPayment(
         .insert(payments)
         .values({
           paymentNo,
-          purpose: 'order',
-          purposeId: orderId,
+          purpose: spec.purpose,
+          purposeId: spec.purposeId,
           channelId: channel.id,
           rail: channel.rail,
-          customerId,
-          prisonId: order.prisonId,
-          amountSatang: order.totalSatang,
+          customerId: spec.customerId,
+          prisonId: spec.prisonId,
+          amountSatang: spec.amountSatang,
           amountSaltSatang: salt,
           chargeSatang: charge,
           status: 'pending',
@@ -501,14 +548,15 @@ export async function createOrderPayment(
   writeAudit(
     {
       actorType: 'customer',
-      actorId: customerId,
-      action: 'payment.created',
+      actorId: spec.customerId,
+      action: spec.action ?? 'payment.created',
       entity: 'payment',
       entityId: paymentId,
-      prisonId: order.prisonId,
+      prisonId: spec.prisonId,
       after: {
         paymentNo: row.paymentNo,
-        orderId,
+        purpose: spec.purpose,
+        purposeId: spec.purposeId,
         rail: row.rail,
         chargeSatang: row.chargeSatang,
         saltSatang: row.amountSaltSatang
@@ -520,6 +568,40 @@ export async function createOrderPayment(
   )
 
   return toPaymentView(row, database)
+}
+
+export async function createOrderPayment(
+  customerId: string,
+  orderId: string,
+  input: CreateOrderPaymentInput,
+  ctx: PaymentContext = {},
+  database: Db = defaultDb()
+): Promise<PaymentView> {
+  const order = database.select().from(orders).where(eq(orders.id, orderId)).get()
+  if (!order) throw notFound('ไม่พบคำสั่งซื้อ')
+  if (order.customerId !== customerId) throw forbidden('ไม่มีสิทธิ์เข้าถึงคำสั่งซื้อนี้')
+  if (order.fulfillmentStatus === 'cancelled') throw conflict('คำสั่งซื้อนี้ถูกยกเลิกแล้ว')
+  if (!PAYABLE_ORDER_STATES.has(order.paymentStatus)) {
+    throw conflict(
+      order.paymentStatus === 'awaiting_verify'
+        ? 'มีสลิปที่รอเจ้าหน้าที่ตรวจสอบอยู่แล้ว'
+        : 'คำสั่งซื้อนี้ชำระเงินเรียบร้อยแล้ว'
+    )
+  }
+
+  return createPaymentFor(
+    {
+      purpose: 'order',
+      purposeId: orderId,
+      customerId,
+      prisonId: order.prisonId,
+      amountSatang: order.totalSatang,
+      inmateCode: order.inmateCodeSnapshot,
+      channelId: input.channelId
+    },
+    ctx,
+    database
+  )
 }
 
 /* ── slip upload ───────────────────────────────────────────────────────── */
@@ -600,6 +682,8 @@ export async function uploadSlip(
       .set({ paymentStatus: 'awaiting_verify', updatedAt: at })
       .where(eq(orders.id, row.purposeId))
       .run()
+  } else if (row.purpose === 'deposit') {
+    onDepositSlipUploaded(row.purposeId, at, database)
   }
 
   writeAudit(
@@ -701,6 +785,10 @@ export async function verifyPayment(
       .set({ paymentStatus: 'paid', paidAt: at, updatedBy: staffId, updatedAt: at })
       .where(eq(orders.id, row.purposeId))
       .run()
+  } else if (row.purpose === 'deposit') {
+    // The money has arrived; crediting it inside the facility is a second,
+    // human step — that is what the deposit review queue is for (p.7).
+    onDepositPaymentVerified(row.purposeId, at, staffId, database)
   }
 
   writeAudit(
@@ -769,6 +857,8 @@ export async function rejectPayment(
       .set({ paymentStatus: 'unpaid', updatedBy: staffId, updatedAt: at })
       .where(eq(orders.id, row.purposeId))
       .run()
+  } else if (row.purpose === 'deposit') {
+    onDepositPaymentRejected(row.purposeId, at, staffId, reason.trim(), database)
   }
 
   writeAudit(
@@ -832,6 +922,8 @@ export async function refundPayment(
       .set({ paymentStatus: 'refunded', updatedBy: staffId, updatedAt: at })
       .where(eq(orders.id, row.purposeId))
       .run()
+  } else if (row.purpose === 'deposit') {
+    onDepositPaymentRefunded(row.purposeId, at, staffId, reason.trim(), database)
   }
 
   writeAudit(
@@ -874,27 +966,53 @@ export function expireDuePayments(at = now(), database: Db = defaultDb()): numbe
   return res.changes
 }
 
-/** Called when an order is cancelled — an unpaid QR must stop being payable. */
-export function voidLivePaymentsForOrder(orderId: string, database: Db = defaultDb()): number {
+/**
+ * Called when the thing being paid for is cancelled — an unpaid QR must stop
+ * being payable. `pending` only: a slip already uploaded is evidence.
+ */
+export function voidLivePayments(
+  purpose: PaymentPurpose,
+  purposeId: string,
+  database: Db = defaultDb()
+): number {
   return database
     .update(payments)
     .set({ status: 'expired' satisfies PaymentState, updatedAt: now() })
     .where(
       and(
-        eq(payments.purpose, 'order'),
-        eq(payments.purposeId, orderId),
+        eq(payments.purpose, purpose),
+        eq(payments.purposeId, purposeId),
         eq(payments.status, 'pending')
       )
     )
     .run().changes
 }
 
-/** Every payment attached to one order, newest first. */
-export function paymentsForOrder(orderId: string, database: Db = defaultDb()) {
+export const voidLivePaymentsForOrder = (orderId: string, database: Db = defaultDb()) =>
+  voidLivePayments('order', orderId, database)
+
+/** Every payment attached to one thing, newest first. */
+export function paymentsFor(
+  purpose: PaymentPurpose,
+  purposeId: string,
+  database: Db = defaultDb()
+) {
   return database
     .select()
     .from(payments)
-    .where(and(eq(payments.purpose, 'order'), eq(payments.purposeId, orderId)))
+    .where(and(eq(payments.purpose, purpose), eq(payments.purposeId, purposeId)))
     .orderBy(desc(payments.createdAt))
     .all()
+}
+
+export const paymentsForOrder = (orderId: string, database: Db = defaultDb()) =>
+  paymentsFor('order', orderId, database)
+
+/** The one payment a deposit is currently hanging on, if any. */
+export function livePaymentFor(
+  purpose: PaymentPurpose,
+  purposeId: string,
+  database: Db = defaultDb()
+) {
+  return paymentsFor(purpose, purposeId, database)[0] ?? null
 }

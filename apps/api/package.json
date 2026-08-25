@@ -22,6 +22,7 @@
     "@pc/contract": "workspace:*",
     "better-sqlite3": "^13.0.3",
     "drizzle-orm": "^0.45.2",
+    "exceljs": "^4.4.0",
     "hono": "^4.13.3",
     "jose": "^6.2.10",
     "jsqr": "^1.4.0",

@@ -110,7 +110,13 @@ export const inmateImportRuns = sqliteTable(
       .notNull()
       .references(() => prisons.id, { onDelete: 'restrict' }),
     source: text('source').notNull(),
+    /** The uploaded file itself, kept so `apply` re-reads exactly what was previewed. */
     fileKey: text('file_key'),
+    fileName: text('file_name'),
+    /** SHA-256 of the upload. `apply` refuses if the stored bytes ever differ. */
+    fileHash: text('file_hash'),
+    /** The options the dry run was computed with — apply reuses them verbatim. */
+    optionsJson: jsonText<Record<string, unknown>>('options_json'),
     status: text('status').$type<'dry_run' | 'applied' | 'failed'>().notNull().default('dry_run'),
     startedAt: ts('started_at').notNull(),
     finishedAt: ts('finished_at'),

@@ -214,6 +214,8 @@ export const PaymentView = z.object({
   purposeId: Ulid,
   /** Set when `purpose` is `order`, so the pay screen can name what is bought. */
   orderNo: z.string().nullable(),
+  /** The same, for `purpose = deposit`. Exactly one of the two is ever set. */
+  depositNo: z.string().nullable(),
   rail: PaymentRail,
   channelId: Ulid,
   channelName: z.string(),
@@ -251,6 +253,7 @@ export const PaymentSummary = z.object({
   purpose: PaymentPurpose,
   purposeId: Ulid,
   orderNo: z.string().nullable(),
+  depositNo: z.string().nullable(),
   prisonId: Ulid,
   prisonName: z.string().nullable(),
   rail: PaymentRail,

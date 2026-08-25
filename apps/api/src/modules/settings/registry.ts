@@ -143,6 +143,30 @@ export const REGISTRY = {
     label: 'ตรวจสอบธนาคาร/เลขบัญชีปลายทางกับสลิป'
   }),
 
+  // p.7: the facility decides the floor and ceiling of a single deposit. Both
+  // are integer satang, like every other amount in the system.
+  'deposit.min_satang': def(z.number().int().min(100), 10000, {
+    scope: 'prison',
+    exposed: true,
+    label: 'ยอดฝากเงินขั้นต่ำ (สตางค์)'
+  }),
+  'deposit.max_satang': def(z.number().int().min(1000), 2000000, {
+    scope: 'prison',
+    exposed: true,
+    label: 'ยอดฝากเงินสูงสุดต่อครั้ง (สตางค์)'
+  }),
+  // On by default: `ลงทะเบียนทำบัตรฝากเงิน` is a real counter step at the
+  // facility, and it is the second gate after the verified relative link.
+  'deposit.require_card': def(z.boolean(), true, {
+    scope: 'prison',
+    exposed: true,
+    label: 'ต้องมีบัตรฝากเงินที่อนุมัติแล้วก่อนฝาก'
+  }),
+  'deposit.max_open_per_inmate': def(z.number().int().min(1).max(20), 3, {
+    scope: 'prison',
+    label: 'จำนวนรายการฝากที่ค้างอยู่พร้อมกันต่อผู้ต้องขัง'
+  }),
+
   'inmate.sync.source': def(z.string().max(60), 'doc_xlsx', {
     label: 'แหล่งข้อมูลผู้ต้องขัง'
   }),
