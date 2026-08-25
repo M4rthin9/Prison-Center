@@ -70,6 +70,25 @@ import type {
   ReviewDepositCardInput,
   ReviewDepositInput
 } from './deposits.js'
+import type {
+  CreateLetterBatchInput,
+  CreateLetterInput,
+  CreateLetterPackageInput,
+  LetterBatch,
+  LetterCredits,
+  LetterDetail,
+  LetterDirection,
+  LetterPackage,
+  LetterPurchaseDetail,
+  LetterPurchaseSummary,
+  LetterStatus,
+  LetterSummary,
+  LetterSummaryTotals,
+  PurchaseLetterPackageInput,
+  ScanReplyResult,
+  UpdateLetterPackageInput,
+  UpdateLetterStatusInput
+} from './letters.js'
 import type { PublicSettings } from './settings.js'
 
 interface Page<T> {
@@ -312,6 +331,54 @@ export function createApiClient(opts: ClientOptions) {
         raw<DepositCard>('/deposit-cards', { method: 'POST', body: input })
     },
 
+    letters: {
+      /** Balance is always read from the ledger — never cached client-side. */
+      credits: () => raw<LetterCredits>('/letters/credits'),
+      packages: (query: { prisonId?: string; direction?: LetterDirection } = {}) =>
+        raw<{ items: LetterPackage[] }>('/letter-packages', { query }),
+      purchase: (packageId: string, input: PurchaseLetterPackageInput = {}) =>
+        raw<LetterPurchaseDetail>(`/letter-packages/${packageId}/purchase`, {
+          method: 'POST',
+          body: input
+        }),
+      purchases: (query: { cursor?: string; limit?: number } = {}) =>
+        raw<Page<LetterPurchaseSummary>>('/letter-purchases', { query }),
+      purchaseGet: (id: string) => raw<LetterPurchaseDetail>(`/letter-purchases/${id}`),
+      /** A fresh QR for the same purchase — never a second purchase. */
+      purchasePay: (id: string, input: { channelId?: string } = {}) =>
+        raw<LetterPurchaseDetail>(`/letter-purchases/${id}/payment`, {
+          method: 'POST',
+          body: input
+        }),
+
+      list: (
+        query: {
+          cursor?: string
+          limit?: number
+          direction?: LetterDirection
+          status?: LetterStatus
+        } = {}
+      ) => raw<Page<LetterSummary>>('/letters', { query }),
+      get: (id: string) => raw<LetterDetail>(`/letters/${id}`),
+      /** A draft costs nothing; `submit` is what spends the coupon. */
+      create: (input: CreateLetterInput) =>
+        raw<LetterDetail>('/letters', { method: 'POST', body: input }),
+      update: (id: string, bodyText: string) =>
+        raw<LetterDetail>(`/letters/${id}`, { method: 'PATCH', body: { bodyText } }),
+      addAttachment(id: string, file: File | Blob, filename = 'photo.jpg') {
+        const form = new FormData()
+        form.append('file', file, filename)
+        return raw<LetterDetail>(`/letters/${id}/attachments`, { method: 'POST', form })
+      },
+      removeAttachment: (id: string, attachmentId: string) =>
+        raw<LetterDetail>(`/letters/${id}/attachments/${attachmentId}`, { method: 'DELETE' }),
+      submit: (id: string) => raw<LetterDetail>(`/letters/${id}/submit`, { method: 'POST' }),
+      cancel: (id: string) => raw<LetterDetail>(`/letters/${id}/cancel`, { method: 'POST' }),
+      scanUrl: (id: string) => url(`/letters/${id}/scan`),
+      attachmentUrl: (id: string, attachmentId: string) =>
+        url(`/letters/${id}/attachments/${attachmentId}`)
+    },
+
     admin: {
       me: () => raw<AdminMeResponse>('/admin/me'),
 
@@ -390,8 +457,7 @@ export function createApiClient(opts: ClientOptions) {
         transfer: (id: string, input: TransferInmateInput) =>
           raw<InmateRow>(`/admin/inmates/${id}/transfer`, { method: 'POST', body: input }),
         remove: (id: string) => raw<InmateRow>(`/admin/inmates/${id}`, { method: 'DELETE' }),
-        restore: (id: string) =>
-          raw<InmateRow>(`/admin/inmates/${id}/restore`, { method: 'POST' }),
+        restore: (id: string) => raw<InmateRow>(`/admin/inmates/${id}/restore`, { method: 'POST' }),
 
         /** Step one: never writes. The preview is the diff a human signs off. */
         dryRun(
@@ -445,6 +511,53 @@ export function createApiClient(opts: ClientOptions) {
           raw<{ items: DepositCard[] }>('/admin/deposit-cards', { query }),
         reviewCard: (id: string, input: ReviewDepositCardInput) =>
           raw<DepositCard>(`/admin/deposit-cards/${id}/review`, { method: 'POST', body: input })
+      },
+
+      letters: {
+        list: (
+          query: {
+            prisonId?: string
+            zoneId?: string
+            status?: LetterStatus
+            direction?: LetterDirection
+            batchId?: string
+            q?: string
+            from?: number
+            to?: number
+            cursor?: string
+            limit?: number
+          } = {}
+        ) => raw<Page<LetterSummary>>('/admin/letters', { query }),
+        get: (id: string) => raw<LetterDetail>(`/admin/letters/${id}`),
+        summary: (query: { prisonId?: string; from?: number; to?: number } = {}) =>
+          raw<LetterSummaryTotals>('/admin/letters/summary', { query }),
+        setStatus: (id: string, input: UpdateLetterStatusInput) =>
+          raw<LetterDetail>(`/admin/letters/${id}/status`, { method: 'POST', body: input }),
+        scanUrl: (id: string) => url(`/admin/letters/${id}/scan`),
+
+        batches: (query: { prisonId?: string; limit?: number } = {}) =>
+          raw<{ items: LetterBatch[] }>('/admin/letters/batches', { query }),
+        batch: (id: string) => raw<LetterBatch>(`/admin/letters/batches/${id}`),
+        createBatch: (input: CreateLetterBatchInput = {}) =>
+          raw<LetterBatch>('/admin/letters/batches', { method: 'POST', body: input }),
+        markBatchPrinted: (id: string) =>
+          raw<LetterBatch>(`/admin/letters/batches/${id}/printed`, { method: 'POST' }),
+        batchFileUrl: (id: string) => url(`/admin/letters/batches/${id}/file`),
+
+        /** The QR on the sheet is read server-side; `letterNo` is the fallback. */
+        scanReply(file: File | Blob, opts: { letterNo?: string } = {}) {
+          const form = new FormData()
+          form.append('file', file, 'reply.jpg')
+          if (opts.letterNo) form.append('letterNo', opts.letterNo)
+          return raw<ScanReplyResult>('/admin/letters/scan-reply', { method: 'POST', form })
+        },
+
+        packages: (query: { prisonId?: string; includeInactive?: boolean } = {}) =>
+          raw<{ items: LetterPackage[] }>('/admin/letter-packages', { query }),
+        createPackage: (input: CreateLetterPackageInput) =>
+          raw<LetterPackage>('/admin/letter-packages', { method: 'POST', body: input }),
+        updatePackage: (id: string, input: UpdateLetterPackageInput) =>
+          raw<LetterPackage>(`/admin/letter-packages/${id}`, { method: 'PATCH', body: input })
       },
 
       paymentChannels: {

@@ -5,15 +5,17 @@ deposits, e-letters, visit booking, payments and reports — all sliced by
 `prison → แดน (zone)`.
 
 Three deployables, one database, no cloud primitives. See [`Plan.md`](Plan.md)
-for the full design, [`docs/PHASE-0.md`](docs/PHASE-0.md) for the foundation and
-[`docs/PHASE-1.md`](docs/PHASE-1.md) for catalog and orders and
-[`docs/PHASE-2.md`](docs/PHASE-2.md) for payments.
+for the full design, and the phase notes under `docs/` for what each phase
+actually shipped: [`PHASE-0`](docs/PHASE-0.md) foundation,
+[`PHASE-0B`](docs/PHASE-0B.md) inmate import, [`PHASE-1`](docs/PHASE-1.md)
+catalog and orders, [`PHASE-2`](docs/PHASE-2.md) payments,
+[`PHASE-3`](docs/PHASE-3.md) deposits, [`PHASE-4`](docs/PHASE-4.md) e-letters.
 
-**Status: Phase 2 (Payments) complete.** A relative places an order, gets a
-PromptPay QR on either rail, uploads a slip, and staff settle or reject it —
-one slip settles exactly one payment, and a wrong-amount slip is refused. Phase
-3 (Deposits) is not started; Phase 0b (inmate import) is still outstanding —
-inmate records are seeded and editable, but there is no XLSX/CSV importer yet.
+**Status: Phase 4 (E-letters) complete.** A relative buys a letter package on
+the same payment spine as an order or a deposit, writes a letter that spends one
+coupon from a ledger, staff batch-print it on A4 with a reply QR on every sheet,
+and the inmate's handwritten reply is scanned back in and lands in the family's
+app. Phase 5 (Visits) is not started.
 
 ---
 

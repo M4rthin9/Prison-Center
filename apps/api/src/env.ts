@@ -46,6 +46,10 @@ const EnvSchema = z.object({
   S3_ACCESS_KEY_ID: z.string().optional(),
   S3_SECRET_ACCESS_KEY: z.string().optional(),
 
+  // `auto` prints with Playwright when it is installed and stores printable
+  // HTML when it is not — a letter queue must not stall on a missing browser.
+  LETTER_RENDERER: z.enum(['auto', 'playwright', 'html']).default('auto'),
+
   NOTIFIER_ADAPTER: z.enum(['console', 'in_app', 'line']).default('console'),
   NOTIFIER_OUTBOX_PATH: z.string().default('./data/outbox.log'),
 

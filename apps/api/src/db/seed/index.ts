@@ -27,7 +27,15 @@ import {
   requestDepositCard,
   reviewDepositCard
 } from '../../modules/deposits/service.js'
+import {
+  createLetter,
+  packagesFor,
+  purchasePackage,
+  submitLetter
+} from '../../modules/letters/service.js'
+import { onLetterPurchasePaymentVerified } from '../../modules/letters/status.js'
 import { seedCatalog } from './catalog.js'
+import { seedLetterPackages } from './letters.js'
 import { seedPaymentChannels } from './payments.js'
 
 /**
@@ -298,6 +306,7 @@ export async function seed(db: Db) {
   /* ── payment channels (เฟส 2) ───────────────────────────────────────── */
 
   const paymentSeed = seedPaymentChannels(db, prisonIds)
+  const letterSeed = seedLetterPackages(db)
 
   /* ── two orders, placed through the real service ────────────────────── */
 
@@ -364,6 +373,30 @@ export async function seed(db: Db) {
     )
   ]
 
+  /* ── จดหมายอิเล็กทรอนิกส์ (เฟส 4) ─────────────────────────────────── */
+
+  // One coupon book bought and paid for, so the compose screen is usable on a
+  // fresh install, and one letter already sitting in the print queue.
+  const letterCustomer = customerIds['0812345678']!
+  const toPrisonPkg = packagesFor(prisonIds['KLP']!, { direction: 'to_prison' }, db)[0]!
+  const purchase = await purchasePackage(letterCustomer, toPrisonPkg.id, {}, {}, db)
+  // The grant only ever happens on a verified slip; the seed plays that event
+  // rather than writing ledger rows by hand.
+  onLetterPurchasePaymentVerified(purchase.id, Date.now(), superAdminId, db)
+
+  const seededLetter = createLetter(
+    letterCustomer,
+    {
+      inmateId: inmateIds[0]!,
+      bodyText:
+        'สวัสดีค่ะพ่อ ที่บ้านสบายดีทุกคน น้องสอบได้ที่หนึ่งของห้อง ' +
+        'แม่ฝากบอกว่าให้ดูแลสุขภาพนะคะ เดี๋ยวเดือนหน้าจะไปเยี่ยม'
+    },
+    {},
+    db
+  )
+  submitLetter(letterCustomer, seededLetter.id, {}, db)
+
   /* ── per-prison settings overrides ──────────────────────────────────── */
 
   for (const p of PRISONS) {
@@ -383,7 +416,9 @@ export async function seed(db: Db) {
     paymentChannels: paymentSeed.channels,
     orders: seededOrders.length,
     depositCards: 2,
-    deposits: seededDeposits.length
+    deposits: seededDeposits.length,
+    letterPackages: letterSeed.letterPackages,
+    letters: 1
   }
 }
 

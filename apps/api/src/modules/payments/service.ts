@@ -12,6 +12,7 @@ import { db as defaultDb, type Db, type DbOrTx } from '../../db/client.js'
 import {
   customers,
   deposits,
+  letterPurchases,
   orders,
   paymentChannels,
   payments,
@@ -47,6 +48,12 @@ import {
   onDepositPaymentVerified,
   onDepositSlipUploaded
 } from '../deposits/status.js'
+import {
+  onLetterPurchasePaymentRefunded,
+  onLetterPurchasePaymentRejected,
+  onLetterPurchasePaymentVerified,
+  onLetterPurchaseSlipUploaded
+} from '../letters/status.js'
 
 export interface PaymentContext {
   ip?: string | null
@@ -172,6 +179,17 @@ function orderNoOf(row: PaymentRow, db: DbOrTx): string | null {
   )
 }
 
+function letterPurchaseNoOf(row: PaymentRow, db: DbOrTx): string | null {
+  if (row.purpose !== 'letter_package') return null
+  return (
+    db
+      .select({ purchaseNo: letterPurchases.purchaseNo })
+      .from(letterPurchases)
+      .where(eq(letterPurchases.id, row.purposeId))
+      .get()?.purchaseNo ?? null
+  )
+}
+
 function depositNoOf(row: PaymentRow, db: DbOrTx): string | null {
   if (row.purpose !== 'deposit') return null
   return (
@@ -197,6 +215,7 @@ export async function toPaymentView(row: PaymentRow, db: Db = defaultDb()): Prom
     purposeId: row.purposeId,
     orderNo: orderNoOf(row, db),
     depositNo: depositNoOf(row, db),
+    letterPurchaseNo: letterPurchaseNoOf(row, db),
     rail: row.rail,
     channelId: row.channelId,
     channelName: channel?.displayName ?? '',
@@ -269,6 +288,23 @@ export function orderNosFor(rows: { purpose: string; purposeId: string }[], db: 
   )
 }
 
+/** Letter-package purchase numbers for a page — same one-query rule again. */
+export function letterPurchaseNosFor(
+  rows: { purpose: string; purposeId: string }[],
+  db: Db = defaultDb()
+) {
+  const ids = rows.filter((r) => r.purpose === 'letter_package').map((r) => r.purposeId)
+  if (ids.length === 0) return new Map<string, string>()
+  return new Map(
+    db
+      .select({ id: letterPurchases.id, purchaseNo: letterPurchases.purchaseNo })
+      .from(letterPurchases)
+      .where(inArray(letterPurchases.id, ids))
+      .all()
+      .map((r) => [r.id, r.purchaseNo] as const)
+  )
+}
+
 /** Deposit numbers for a page of payments — same one-query rule as orders. */
 export function depositNosFor(
   rows: { purpose: string; purposeId: string }[],
@@ -310,6 +346,7 @@ export function paymentDetail(paymentId: string, db: Db = defaultDb()) {
       purposeId: row.purposeId,
       orderNo: orderNoOf(row, db),
       depositNo: depositNoOf(row, db),
+      letterPurchaseNo: letterPurchaseNoOf(row, db),
       prisonId: row.prisonId,
       prisonName: prison?.nameTh ?? null,
       rail: row.rail,
@@ -477,11 +514,7 @@ export async function createPaymentFor(
       .run()
   }
 
-  const customer = database
-    .select()
-    .from(customers)
-    .where(eq(customers.id, spec.customerId))
-    .get()
+  const customer = database.select().from(customers).where(eq(customers.id, spec.customerId)).get()
   const prison = database.select().from(prisons).where(eq(prisons.id, spec.prisonId)).get()
   if (!prison) throw notFound('ไม่พบเรือนจำ')
 
@@ -684,6 +717,8 @@ export async function uploadSlip(
       .run()
   } else if (row.purpose === 'deposit') {
     onDepositSlipUploaded(row.purposeId, at, database)
+  } else if (row.purpose === 'letter_package') {
+    onLetterPurchaseSlipUploaded(row.purposeId, at, database)
   }
 
   writeAudit(
@@ -789,6 +824,10 @@ export async function verifyPayment(
     // The money has arrived; crediting it inside the facility is a second,
     // human step — that is what the deposit review queue is for (p.7).
     onDepositPaymentVerified(row.purposeId, at, staffId, database)
+  } else if (row.purpose === 'letter_package') {
+    // Coupons are granted here and nowhere else — a slip that passed is the
+    // only event that turns money into letter credits (§4.5).
+    onLetterPurchasePaymentVerified(row.purposeId, at, staffId, database)
   }
 
   writeAudit(
@@ -859,6 +898,8 @@ export async function rejectPayment(
       .run()
   } else if (row.purpose === 'deposit') {
     onDepositPaymentRejected(row.purposeId, at, staffId, reason.trim(), database)
+  } else if (row.purpose === 'letter_package') {
+    onLetterPurchasePaymentRejected(row.purposeId, at, staffId, reason.trim(), database)
   }
 
   writeAudit(
@@ -924,6 +965,8 @@ export async function refundPayment(
       .run()
   } else if (row.purpose === 'deposit') {
     onDepositPaymentRefunded(row.purposeId, at, staffId, reason.trim(), database)
+  } else if (row.purpose === 'letter_package') {
+    onLetterPurchasePaymentRefunded(row.purposeId, at, staffId, reason.trim(), database)
   }
 
   writeAudit(

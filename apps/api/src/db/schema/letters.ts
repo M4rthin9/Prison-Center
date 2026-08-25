@@ -17,13 +17,7 @@ export type LetterDirection = 'to_prison' | 'to_home'
 export type LetterCreditReason = 'purchase' | 'consume' | 'refund' | 'admin_adjust' | 'expiry'
 
 export type LetterStatus =
-  | 'draft'
-  | 'queued'
-  | 'pending_print'
-  | 'printed'
-  | 'dispatched'
-  | 'delivered'
-  | 'rejected'
+  'draft' | 'queued' | 'pending_print' | 'printed' | 'dispatched' | 'delivered' | 'rejected'
 
 export type LetterPurchaseStatus = 'pending' | 'paid' | 'cancelled' | 'refunded'
 

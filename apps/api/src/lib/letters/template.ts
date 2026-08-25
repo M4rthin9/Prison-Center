@@ -126,9 +126,7 @@ function coverPage(header: BatchHeader, sheets: LetterSheet[]): string {
 }
 
 function sheetPage(sheet: LetterSheet, qrDataUri: string): string {
-  const photos = sheet.attachmentDataUris
-    .map((src) => `<img src="${src}" alt="" />`)
-    .join('')
+  const photos = sheet.attachmentDataUris.map((src) => `<img src="${src}" alt="" />`).join('')
 
   return `<section class="sheet">
     <div class="head">
@@ -160,10 +158,7 @@ function sheetPage(sheet: LetterSheet, qrDataUri: string): string {
 }
 
 /** The whole batch as one printable document: cover sheet, then one page each. */
-export async function renderBatchHtml(
-  header: BatchHeader,
-  sheets: LetterSheet[]
-): Promise<string> {
+export async function renderBatchHtml(header: BatchHeader, sheets: LetterSheet[]): Promise<string> {
   const pages: string[] = [coverPage(header, sheets)]
   for (const sheet of sheets) {
     pages.push(sheetPage(sheet, await qrDataUrl(replyQrPayload(sheet.letterNo), 360)))

@@ -2,6 +2,7 @@ import { hostname } from 'node:os'
 import { db } from '../../db/client.js'
 import { customerRealm, staffRealm } from '../auth/realms.js'
 import { expireDuePayments } from '../../modules/payments/service.js'
+import { markBatchFailed, renderBatch } from '../../modules/letters/service.js'
 import { MINUTE, now } from '../time.js'
 import {
   claimNext,
@@ -24,6 +25,20 @@ export const handlers: Partial<Record<JobKind, JobHandler>> = {
   // A QR whose window has closed must stop being payable — but only while it
   // is still `pending`. A payment with a slip on it is waiting on staff.
   'payment.expire': () => ({ expired: expireDuePayments() }),
+
+  // The A4 batch PDF (§4.5). Off the request thread on purpose: a browser
+  // starting up must never be something a staff member waits on.
+  'letter.batch_pdf': async (job) => {
+    const batchId = String(job.payload.batchId ?? '')
+    try {
+      return await renderBatch(batchId)
+    } catch (err) {
+      // Park the failure on the batch as well as the job row, so the operator
+      // sees it on the screen they are actually looking at.
+      markBatchFailed(batchId, err instanceof Error ? err.message : String(err))
+      throw err
+    }
+  },
 
   'session.purge': () => {
     const at = now()

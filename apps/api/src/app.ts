@@ -22,6 +22,12 @@ import { createPaymentChannelRoutes, createPaymentRoutes } from './modules/payme
 import { createAdminPaymentRoutes } from './modules/payments/admin-routes.js'
 import { createDepositCardRoutes, createDepositRoutes } from './modules/deposits/routes.js'
 import { createAdminDepositRoutes } from './modules/deposits/admin-routes.js'
+import {
+  createLetterPackageRoutes,
+  createLetterPurchaseRoutes,
+  createLetterRoutes
+} from './modules/letters/routes.js'
+import { createAdminLetterRoutes } from './modules/letters/admin-routes.js'
 import { createAdminRoutes } from './modules/admin/routes.js'
 import { createAdminSettingsRoutes, createPublicSettingsRoutes } from './modules/settings/routes.js'
 import type { AppEnv } from './types.js'
@@ -76,6 +82,9 @@ export function createApp() {
   api.route('/payments', createPaymentRoutes())
   api.route('/deposit-cards', createDepositCardRoutes())
   api.route('/deposits', createDepositRoutes())
+  api.route('/letter-packages', createLetterPackageRoutes())
+  api.route('/letter-purchases', createLetterPurchaseRoutes())
+  api.route('/letters', createLetterRoutes())
   api.route('/settings', createPublicSettingsRoutes())
 
   /* staff realm — same session shape, separate cookie, separate route tree */
@@ -94,6 +103,7 @@ export function createApp() {
   api.route('/admin', createAdminInmateRoutes())
   api.route('/admin', createAdminPaymentRoutes())
   api.route('/admin', createAdminDepositRoutes())
+  api.route('/admin', createAdminLetterRoutes())
   api.route('/admin', createAdminRoutes())
 
   app.route(API_PREFIX, api)
