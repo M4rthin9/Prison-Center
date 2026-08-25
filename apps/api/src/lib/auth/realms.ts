@@ -45,7 +45,13 @@ export interface RealmSpec {
   setPassword(db: Db, id: string, hash: string, mustChange: boolean, at: number): void
   createSession(
     db: Db,
-    input: { userId: string; tokenHash: string; expiresAt: number; ip?: string | null; userAgent?: string | null }
+    input: {
+      userId: string
+      tokenHash: string
+      expiresAt: number
+      ip?: string | null
+      userAgent?: string | null
+    }
   ): string
   findSessionByHash(db: Db, tokenHash: string): SessionRow | undefined
   revokeSession(db: Db, id: string, replacedBy: string | null, at: number): void
@@ -131,7 +137,9 @@ export const customerRealm: RealmSpec = {
   },
   purgeExpiredSessions(db, at) {
     db.delete(customerSessions)
-      .where(or(lt(customerSessions.expiresAt, at), lt(customerSessions.revokedAt, at - 7 * 86400000)))
+      .where(
+        or(lt(customerSessions.expiresAt, at), lt(customerSessions.revokedAt, at - 7 * 86400000))
+      )
       .run()
   }
 }
@@ -197,7 +205,10 @@ export const staffRealm: RealmSpec = {
     )
   },
   revokeSession(db, id, replacedBy, at) {
-    db.update(staffSessions).set({ revokedAt: at, replacedBy }).where(eq(staffSessions.id, id)).run()
+    db.update(staffSessions)
+      .set({ revokedAt: at, replacedBy })
+      .where(eq(staffSessions.id, id))
+      .run()
   },
   revokeAllForUser(db, userId, at) {
     db.update(staffSessions)

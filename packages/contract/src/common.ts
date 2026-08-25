@@ -51,16 +51,14 @@ export function normalizeThaiPhone(input: string): string | null {
   return local
 }
 
-export const ThaiPhone = z
-  .string()
-  .transform((v, ctx) => {
-    const n = normalizeThaiPhone(v)
-    if (!n) {
-      ctx.addIssue({ code: 'custom', message: 'เบอร์มือถือไม่ถูกต้อง' })
-      return z.NEVER
-    }
-    return n
-  })
+export const ThaiPhone = z.string().transform((v, ctx) => {
+  const n = normalizeThaiPhone(v)
+  if (!n) {
+    ctx.addIssue({ code: 'custom', message: 'เบอร์มือถือไม่ถูกต้อง' })
+    return z.NEVER
+  }
+  return n
+})
 
 /** OWASP-ish floor. Deliberately not a character-class maze — length is what matters. */
 export const Password = z.string().min(8, 'รหัสผ่านอย่างน้อย 8 ตัวอักษร').max(200)

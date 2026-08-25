@@ -2,7 +2,15 @@ import { hostname } from 'node:os'
 import { db } from '../../db/client.js'
 import { customerRealm, staffRealm } from '../auth/realms.js'
 import { MINUTE, now } from '../time.js'
-import { claimNext, complete, enqueue, fail, requeueStale, type JobKind, type JobRow } from './queue.js'
+import {
+  claimNext,
+  complete,
+  enqueue,
+  fail,
+  requeueStale,
+  type JobKind,
+  type JobRow
+} from './queue.js'
 
 export type JobHandler = (job: JobRow) => Promise<unknown> | unknown
 
@@ -77,17 +85,14 @@ export function startScheduler(intervalMs = 5_000): Scheduler {
 
   // Housekeeping: reclaim jobs orphaned by a crash, and keep the session tables
   // from growing forever.
-  const housekeeping = setInterval(
-    () => {
-      try {
-        requeueStale()
-        enqueue('session.purge')
-      } catch (err) {
-        console.error('[jobs] housekeeping failed', err)
-      }
-    },
-    60 * MINUTE
-  )
+  const housekeeping = setInterval(() => {
+    try {
+      requeueStale()
+      enqueue('session.purge')
+    } catch (err) {
+      console.error('[jobs] housekeeping failed', err)
+    }
+  }, 60 * MINUTE)
 
   tick.unref()
   housekeeping.unref()

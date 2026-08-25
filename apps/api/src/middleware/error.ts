@@ -28,7 +28,8 @@ export const onError: ErrorHandler = (err, c: Context) => {
   }
 
   if (err instanceof HTTPException) {
-    const code = err.status === 401 ? 'UNAUTHORIZED' : err.status === 403 ? 'FORBIDDEN' : 'BAD_REQUEST'
+    const code =
+      err.status === 401 ? 'UNAUTHORIZED' : err.status === 403 ? 'FORBIDDEN' : 'BAD_REQUEST'
     return c.json({ error: { code, message: err.message } }, err.status)
   }
 

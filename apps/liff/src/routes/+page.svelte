@@ -6,6 +6,7 @@
   // p.13 — the LINE@ menu, in the order the diagram lists it.
   const MENU = [
     { href: '/shop', label: 'ร้านค้า', icon: '🛒', needsVerify: true },
+    { href: '/cart', label: 'ตะกร้าสินค้า', icon: '🧺', needsVerify: true },
     { href: '/visits', label: 'จองเยี่ยม', icon: '📅', needsVerify: true },
     { href: '/deposits', label: 'การฝากเงิน', icon: '💰', needsVerify: true },
     { href: '/letters', label: 'จดหมาย', icon: '✉️', needsVerify: true },
@@ -31,8 +32,8 @@
   {#if !session.canTransact}
     <Alert tone="warning" title="ยังใช้บริการไม่ได้">
       บัญชีของคุณยังไม่ได้รับการยืนยันความสัมพันธ์กับผู้ต้องขัง
-      กรุณาเพิ่มผู้ต้องขังในหน้าโปรไฟล์และรอเจ้าหน้าที่ตรวจสอบ
-      จึงจะสั่งซื้อสินค้า ฝากเงิน ส่งจดหมาย หรือจองเยี่ยมได้
+      กรุณาเพิ่มผู้ต้องขังในหน้าโปรไฟล์และรอเจ้าหน้าที่ตรวจสอบ จึงจะสั่งซื้อสินค้า ฝากเงิน ส่งจดหมาย
+      หรือจองเยี่ยมได้
     </Alert>
   {/if}
 

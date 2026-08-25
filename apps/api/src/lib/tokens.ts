@@ -22,7 +22,9 @@ const secret = () => (key ??= new TextEncoder().encode(env().JWT_SECRET))
 
 const ISSUER = 'prison-commerce'
 
-export async function signAccessToken(claims: AccessClaims): Promise<{ token: string; expiresIn: number }> {
+export async function signAccessToken(
+  claims: AccessClaims
+): Promise<{ token: string; expiresIn: number }> {
   const ttlMin = env().ACCESS_TOKEN_TTL_MINUTES
   const token = await new SignJWT({ ...claims })
     .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })

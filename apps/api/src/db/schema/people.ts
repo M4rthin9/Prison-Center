@@ -87,11 +87,7 @@ export const customerInmates = sqliteTable(
 /* ── staff ─────────────────────────────────────────────────────────────── */
 
 export type StaffRole =
-  | 'super_admin'
-  | 'prison_admin'
-  | 'zone_staff'
-  | 'finance'
-  | 'letter_operator'
+  'super_admin' | 'prison_admin' | 'zone_staff' | 'finance' | 'letter_operator'
 
 export const staff = sqliteTable(
   'staff',

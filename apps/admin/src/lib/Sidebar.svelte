@@ -4,6 +4,8 @@
 
   const LINKS = [
     { href: '/', label: 'ภาพรวม', icon: '📊', superOnly: false },
+    { href: '/orders', label: 'คำสั่งซื้อ', icon: '🧾', superOnly: false },
+    { href: '/catalog', label: 'ร้านค้าและสินค้า', icon: '🛒', superOnly: false },
     { href: '/customers/verify', label: 'คำขอผูกบัญชี', icon: '✅', superOnly: false },
     { href: '/customers', label: 'บัญชีญาติ', icon: '👥', superOnly: false },
     { href: '/staff', label: 'เจ้าหน้าที่', icon: '🛡️', superOnly: true },

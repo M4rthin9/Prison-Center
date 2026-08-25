@@ -1,4 +1,6 @@
 export * from './_shared.js'
 export * from './facility.js'
 export * from './people.js'
+export * from './catalog.js'
+export * from './orders.js'
 export * from './system.js'

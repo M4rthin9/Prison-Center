@@ -1,10 +1,5 @@
 import { OpenAPIHono, createRoute } from '@hono/zod-openapi'
-import {
-  ChangePasswordInput,
-  LoginInput,
-  RegisterInput,
-  SessionResponse
-} from '@pc/contract'
+import { ChangePasswordInput, LoginInput, RegisterInput, SessionResponse } from '@pc/contract'
 import type { AppEnv } from '../../types.js'
 import { db } from '../../db/client.js'
 import {

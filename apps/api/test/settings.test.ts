@@ -67,10 +67,13 @@ describe('settings registry', () => {
     const bkw = prisons.items.find((p: any) => p.code === 'BKW')
 
     const { client: klp } = await loginStaff(app(), 'klp.admin')
-    const cross = await klp.request(`${BASE}/admin/settings/visit.horizon_weeks?prisonId=${bkw.id}`, {
-      method: 'PUT',
-      json: { value: 2 }
-    })
+    const cross = await klp.request(
+      `${BASE}/admin/settings/visit.horizon_weeks?prisonId=${bkw.id}`,
+      {
+        method: 'PUT',
+        json: { value: 2 }
+      }
+    )
     expect(cross.status).toBe(403)
 
     const global = await klp.request(`${BASE}/admin/settings/payment.salt.enabled`, {

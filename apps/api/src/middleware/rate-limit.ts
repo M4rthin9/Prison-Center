@@ -52,9 +52,7 @@ export function hit(key: string, policy: LimitPolicy, db: Db = defaultDb()): voi
 
 export function clientIp(headers: Headers | { get(name: string): string | null }): string {
   return (
-    headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
-    headers.get('x-real-ip') ??
-    'unknown'
+    headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? headers.get('x-real-ip') ?? 'unknown'
   )
 }
 

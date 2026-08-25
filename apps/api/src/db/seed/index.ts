@@ -2,16 +2,25 @@ import { sql } from 'drizzle-orm'
 import { createDb, runMigrations, type Db } from '../client.js'
 import { env } from '../../env.js'
 import {
+  categories,
+  counters,
   customerInmates,
   customers,
   inmates,
+  orderItems,
+  orders,
   prisons,
+  products,
+  shopHours,
+  shops,
   staff,
   workDivisions,
   zones
 } from '../schema/index.js'
 import { hashPassword } from '../../lib/password.js'
 import { setSetting } from '../../modules/settings/service.js'
+import { placeOrder } from '../../modules/orders/service.js'
+import { seedCatalog } from './catalog.js'
 
 /**
  * Dev fixtures. Deterministic and idempotent: running it twice leaves the same
@@ -55,8 +64,30 @@ const PRISONS: SeedPrison[] = [
   }
 ]
 
-const THAI_FIRST = ['สมชาย', 'ประเสริฐ', 'วิชัย', 'อนุชา', 'ธนากร', 'ภาคภูมิ', 'ณัฐพล', 'กิตติศักดิ์', 'ศราวุธ', 'พงศกร']
-const THAI_LAST = ['ใจดี', 'ศรีสุข', 'บุญมา', 'ทองคำ', 'แสงทอง', 'พัฒนา', 'รุ่งเรือง', 'สมบูรณ์', 'วงศ์ไทย', 'มั่นคง']
+const THAI_FIRST = [
+  'สมชาย',
+  'ประเสริฐ',
+  'วิชัย',
+  'อนุชา',
+  'ธนากร',
+  'ภาคภูมิ',
+  'ณัฐพล',
+  'กิตติศักดิ์',
+  'ศราวุธ',
+  'พงศกร'
+]
+const THAI_LAST = [
+  'ใจดี',
+  'ศรีสุข',
+  'บุญมา',
+  'ทองคำ',
+  'แสงทอง',
+  'พัฒนา',
+  'รุ่งเรือง',
+  'สมบูรณ์',
+  'วงศ์ไทย',
+  'มั่นคง'
+]
 
 function seedInmateName(i: number) {
   return `${THAI_FIRST[i % THAI_FIRST.length]} ${THAI_LAST[(i * 3) % THAI_LAST.length]}`
@@ -65,9 +96,20 @@ function seedInmateName(i: number) {
 export async function seed(db: Db) {
   const hash = await hashPassword(DEV_PASSWORD)
 
-  const existing = db.select({ n: sql<number>`count(*)` }).from(prisons).get()?.n ?? 0
+  const existing =
+    db
+      .select({ n: sql<number>`count(*)` })
+      .from(prisons)
+      .get()?.n ?? 0
   if (existing > 0) {
     console.log('• database already seeded — clearing dev data first')
+    db.delete(orderItems).run()
+    db.delete(orders).run()
+    db.delete(counters).run()
+    db.delete(products).run()
+    db.delete(shopHours).run()
+    db.delete(shops).run()
+    db.delete(categories).run()
     db.delete(customerInmates).run()
     db.delete(customers).run()
     db.delete(staff).run()
@@ -146,12 +188,42 @@ export async function seed(db: Db) {
   /* ── staff ──────────────────────────────────────────────────────────── */
 
   const staffSeed = [
-    { username: 'superadmin', fullName: 'ผู้ดูแลระบบส่วนกลาง', role: 'super_admin' as const, prison: null },
-    { username: 'klp.admin', fullName: 'ผู้ดูแลเรือนจำคลองเปรม', role: 'prison_admin' as const, prison: 'KLP' },
-    { username: 'klp.finance', fullName: 'การเงิน คลองเปรม', role: 'finance' as const, prison: 'KLP' },
-    { username: 'klp.letters', fullName: 'งานจดหมาย คลองเปรม', role: 'letter_operator' as const, prison: 'KLP' },
-    { username: 'klp.zone', fullName: 'เจ้าหน้าที่แดน คลองเปรม', role: 'zone_staff' as const, prison: 'KLP' },
-    { username: 'bkw.admin', fullName: 'ผู้ดูแลเรือนจำบางขวาง', role: 'prison_admin' as const, prison: 'BKW' }
+    {
+      username: 'superadmin',
+      fullName: 'ผู้ดูแลระบบส่วนกลาง',
+      role: 'super_admin' as const,
+      prison: null
+    },
+    {
+      username: 'klp.admin',
+      fullName: 'ผู้ดูแลเรือนจำคลองเปรม',
+      role: 'prison_admin' as const,
+      prison: 'KLP'
+    },
+    {
+      username: 'klp.finance',
+      fullName: 'การเงิน คลองเปรม',
+      role: 'finance' as const,
+      prison: 'KLP'
+    },
+    {
+      username: 'klp.letters',
+      fullName: 'งานจดหมาย คลองเปรม',
+      role: 'letter_operator' as const,
+      prison: 'KLP'
+    },
+    {
+      username: 'klp.zone',
+      fullName: 'เจ้าหน้าที่แดน คลองเปรม',
+      role: 'zone_staff' as const,
+      prison: 'KLP'
+    },
+    {
+      username: 'bkw.admin',
+      fullName: 'ผู้ดูแลเรือนจำบางขวาง',
+      role: 'prison_admin' as const,
+      prison: 'BKW'
+    }
   ]
 
   for (const s of staffSeed) {
@@ -180,6 +252,7 @@ export async function seed(db: Db) {
     { phone: '0856789012', fullName: 'สุดา แสงทอง', links: [], verify: 'pending' as const }
   ]
 
+  const customerIds: Record<string, string> = {}
   for (const cst of customerSeed) {
     const row = db
       .insert(customers)
@@ -193,6 +266,7 @@ export async function seed(db: Db) {
       })
       .returning()
       .get()
+    customerIds[cst.phone] = row.id
 
     for (const idx of cst.links) {
       db.insert(customerInmates)
@@ -207,6 +281,50 @@ export async function seed(db: Db) {
     }
   }
 
+  /* ── catalog (เฟส 1) ────────────────────────────────────────────────── */
+
+  const catalog = seedCatalog(db, prisonIds)
+
+  /* ── two orders, placed through the real service ────────────────────── */
+
+  // Going through placeOrder rather than inserting rows keeps the fixtures
+  // honest: they are numbered, priced and validated exactly like a real order.
+  const klpShop = catalog.shopIdsByPrison['KLP']![0]!
+  const klpProducts = catalog.productIdsByShop[klpShop]!
+  const vocShop = catalog.shopIdsByPrison['KLP']![1]!
+  const vocProducts = catalog.productIdsByShop[vocShop]!
+
+  const seededOrders = [
+    placeOrder(
+      customerIds['0812345678']!,
+      {
+        inmateId: inmateIds[0]!,
+        shopId: klpShop,
+        items: [
+          { productId: klpProducts[0]!, qty: 2 },
+          { productId: klpProducts[7]!, qty: 3 },
+          { productId: klpProducts[6]!, qty: 4 }
+        ],
+        note: 'ฝากส่งช่วงเช้า'
+      },
+      {},
+      db
+    ),
+    placeOrder(
+      customerIds['0812345678']!,
+      {
+        inmateId: inmateIds[1]!,
+        shopId: vocShop,
+        items: [
+          { productId: vocProducts[0]!, qty: 2 },
+          { productId: vocProducts[2]!, qty: 1 }
+        ]
+      },
+      {},
+      db
+    )
+  ]
+
   /* ── per-prison settings overrides ──────────────────────────────────── */
 
   for (const p of PRISONS) {
@@ -219,7 +337,11 @@ export async function seed(db: Db) {
     zones: Object.values(zoneIds).flat().length,
     inmates: inmateIds.length,
     staff: staffSeed.length,
-    customers: customerSeed.length
+    customers: customerSeed.length,
+    categories: catalog.categories,
+    shops: catalog.shops,
+    products: catalog.products,
+    orders: seededOrders.length
   }
 }
 

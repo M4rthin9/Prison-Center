@@ -3,7 +3,9 @@
   "private": true,
   "version": "0.1.0",
   "packageManager": "pnpm@11.22.0",
-  "engines": { "node": ">=22.11.0" },
+  "engines": {
+    "node": ">=22.11.0"
+  },
   "scripts": {
     "dev": "turbo run dev --parallel",
     "build": "turbo run build",
@@ -15,8 +17,9 @@
     "db:reset": "pnpm --filter @pc/api db:reset"
   },
   "devDependencies": {
+    "prettier": "^3.6.2",
+    "prettier-plugin-svelte": "^4.1.1",
     "turbo": "^2.10.11",
-    "typescript": "^5.9.3",
-    "prettier": "^3.6.2"
+    "typescript": "^5.9.3"
   }
 }

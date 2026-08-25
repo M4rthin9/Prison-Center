@@ -35,7 +35,11 @@ export class AppError extends Error {
   constructor(
     code: ErrorCode,
     message: string,
-    opts: { fields?: Record<string, string[]>; headers?: Record<string, string>; cause?: unknown } = {}
+    opts: {
+      fields?: Record<string, string[]>
+      headers?: Record<string, string>
+      cause?: unknown
+    } = {}
   ) {
     super(message, { cause: opts.cause })
     this.name = 'AppError'
@@ -47,7 +51,11 @@ export class AppError extends Error {
 
   toJSON() {
     return {
-      error: { code: this.code, message: this.message, ...(this.fields ? { fields: this.fields } : {}) }
+      error: {
+        code: this.code,
+        message: this.message,
+        ...(this.fields ? { fields: this.fields } : {})
+      }
     }
   }
 }

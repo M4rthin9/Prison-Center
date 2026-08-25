@@ -3,7 +3,10 @@ import { notifications } from '../../db/schema/index.js'
 import type { Notification, NotifierAdapter } from './types.js'
 
 /** Writes to the `notifications` table — the surface the apps read from. */
-export function createInAppNotifier(getDb: () => Db, channel: 'in_app' | 'line' = 'in_app'): NotifierAdapter {
+export function createInAppNotifier(
+  getDb: () => Db,
+  channel: 'in_app' | 'line' = 'in_app'
+): NotifierAdapter {
   return {
     kind: channel === 'line' ? 'line' : 'in_app',
     async send(n: Notification) {

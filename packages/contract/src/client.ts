@@ -9,7 +9,33 @@ import type {
   UpdateMeInput
 } from './auth.js'
 import type { PrisonDetail, PrisonSummary } from './facility.js'
+import type {
+  Category,
+  CreateCategoryInput,
+  CreateProductInput,
+  CreateShopInput,
+  Product,
+  ShopDetail,
+  ShopHoursInput,
+  ShopSummary,
+  UpdateCategoryInput,
+  UpdateProductInput,
+  UpdateShopInput
+} from './catalog.js'
+import type {
+  CreateOrderInput,
+  FulfillmentStatus,
+  OrderDetail,
+  OrderSummary,
+  PaymentStatus,
+  UpdateFulfillmentInput
+} from './orders.js'
 import type { PublicSettings } from './settings.js'
+
+interface Page<T> {
+  items: T[]
+  nextCursor: string | null
+}
 
 export class ApiClientError extends Error {
   readonly status: number
@@ -189,8 +215,87 @@ export function createApiClient(opts: ClientOptions) {
       update: (input: UpdateMeInput) => raw<MeResponse>('/me', { method: 'PATCH', body: input })
     },
 
+    catalog: {
+      shops: (query: { prisonId?: string; zoneId?: string } = {}) =>
+        raw<{ items: ShopSummary[] }>('/shops', { query }),
+      shop: (id: string) => raw<ShopDetail>(`/shops/${id}`),
+      categories: (query: { shopId?: string } = {}) =>
+        raw<{ items: Category[] }>('/categories', { query }),
+      products: (query: {
+        shopId: string
+        categoryId?: string
+        q?: string
+        cursor?: string
+        limit?: number
+      }) => raw<Page<Product>>('/products', { query }),
+      product: (id: string) => raw<Product>(`/products/${id}`)
+    },
+
+    orders: {
+      create: (input: CreateOrderInput) =>
+        raw<OrderDetail>('/orders', { method: 'POST', body: input }),
+      list: (query: { cursor?: string; limit?: number; status?: FulfillmentStatus } = {}) =>
+        raw<Page<OrderSummary>>('/orders', { query }),
+      get: (id: string) => raw<OrderDetail>(`/orders/${id}`)
+    },
+
     admin: {
-      me: () => raw<AdminMeResponse>('/admin/me')
+      me: () => raw<AdminMeResponse>('/admin/me'),
+
+      shops: {
+        list: (query: { prisonId?: string; includeInactive?: boolean } = {}) =>
+          raw<{ items: ShopSummary[] }>('/admin/shops', { query }),
+        get: (id: string) => raw<ShopDetail>(`/admin/shops/${id}`),
+        create: (input: CreateShopInput) =>
+          raw<ShopDetail>('/admin/shops', { method: 'POST', body: input }),
+        update: (id: string, input: UpdateShopInput) =>
+          raw<ShopDetail>(`/admin/shops/${id}`, { method: 'PATCH', body: input }),
+        setHours: (id: string, input: ShopHoursInput) =>
+          raw<ShopDetail>(`/admin/shops/${id}/hours`, { method: 'PUT', body: input })
+      },
+
+      categories: {
+        list: () => raw<{ items: Category[] }>('/admin/categories'),
+        create: (input: CreateCategoryInput) =>
+          raw<Category>('/admin/categories', { method: 'POST', body: input }),
+        update: (id: string, input: UpdateCategoryInput) =>
+          raw<Category>(`/admin/categories/${id}`, { method: 'PATCH', body: input })
+      },
+
+      products: {
+        list: (query: {
+          shopId?: string
+          categoryId?: string
+          q?: string
+          includeInactive?: boolean
+          cursor?: string
+          limit?: number
+        }) => raw<Page<Product>>('/admin/products', { query }),
+        create: (input: CreateProductInput) =>
+          raw<Product>('/admin/products', { method: 'POST', body: input }),
+        update: (id: string, input: UpdateProductInput) =>
+          raw<Product>(`/admin/products/${id}`, { method: 'PATCH', body: input })
+      },
+
+      orders: {
+        list: (
+          query: {
+            prisonId?: string
+            zoneId?: string
+            shopId?: string
+            fulfillmentStatus?: FulfillmentStatus
+            paymentStatus?: PaymentStatus
+            q?: string
+            from?: number
+            to?: number
+            cursor?: string
+            limit?: number
+          } = {}
+        ) => raw<Page<OrderSummary>>('/admin/orders', { query }),
+        get: (id: string) => raw<OrderDetail>(`/admin/orders/${id}`),
+        setFulfillment: (id: string, input: UpdateFulfillmentInput) =>
+          raw<OrderDetail>(`/admin/orders/${id}/fulfillment`, { method: 'PATCH', body: input })
+      }
     },
 
     prisons: {

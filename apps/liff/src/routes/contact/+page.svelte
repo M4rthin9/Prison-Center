@@ -47,8 +47,8 @@
 
   <Card title="เวลาให้บริการ">
     <p class="text-sm text-muted">
-      ปิดรับคำสั่งซื้อประจำวันเวลา {settings?.order.cutoffTime ?? '—'} น.
-      · เปิดให้จองเยี่ยมล่วงหน้า {settings?.visit.horizonWeeks ?? '—'} สัปดาห์
+      ปิดรับคำสั่งซื้อประจำวันเวลา {settings?.order.cutoffTime ?? '—'} น. · เปิดให้จองเยี่ยมล่วงหน้า {settings
+        ?.visit.horizonWeeks ?? '—'} สัปดาห์
     </p>
   </Card>
 </main>

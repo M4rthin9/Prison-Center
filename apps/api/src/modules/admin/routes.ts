@@ -2,7 +2,14 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
 import { and, count, desc, eq, like, or } from 'drizzle-orm'
 import { AdminMeResponse, Password, StaffRole, Ulid, VerifyStatus } from '@pc/contract'
 import { db } from '../../db/client.js'
-import { customerInmates, customers, inmates, prisons, staff, zones } from '../../db/schema/index.js'
+import {
+  customerInmates,
+  customers,
+  inmates,
+  prisons,
+  staff,
+  zones
+} from '../../db/schema/index.js'
 import { writeAudit } from '../../lib/audit.js'
 import { requestContext } from '../../lib/auth/session.js'
 import { customerRealm, staffRealm } from '../../lib/auth/realms.js'
@@ -316,9 +323,7 @@ export function createAdminRoutes() {
         .innerJoin(inmates, eq(customerInmates.inmateId, inmates.id))
         .innerJoin(prisons, eq(inmates.prisonId, prisons.id))
         .leftJoin(zones, eq(inmates.zoneId, zones.id))
-        .where(
-          and(eq(customerInmates.verifyStatus, status), scopeFilter(scope, inmates.prisonId))
-        )
+        .where(and(eq(customerInmates.verifyStatus, status), scopeFilter(scope, inmates.prisonId)))
         .orderBy(desc(customerInmates.createdAt))
         .limit(limit)
         .all()

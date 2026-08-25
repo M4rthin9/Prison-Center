@@ -123,10 +123,7 @@ export function clearRefreshCookie(c: Context, spec: RealmSpec) {
 
 export function requestContext(c: Context): RequestContext {
   return {
-    ip:
-      c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ??
-      c.req.header('x-real-ip') ??
-      null,
+    ip: c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? c.req.header('x-real-ip') ?? null,
     userAgent: c.req.header('user-agent') ?? null
   }
 }

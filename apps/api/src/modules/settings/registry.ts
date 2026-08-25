@@ -74,6 +74,18 @@ export const REGISTRY = {
     exposed: true,
     label: 'เวลาปิดรับคำสั่งซื้อประจำวัน'
   }),
+  // Off by default so a fresh install (and every dev machine at 22:00) can
+  // place an order. Turn it on per facility once the real hours are entered.
+  'order.enforce_shop_hours': def(z.boolean(), false, {
+    scope: 'prison',
+    exposed: true,
+    label: 'บังคับเวลาทำการร้านค้าและเวลาปิดรับคำสั่งซื้อ'
+  }),
+  'order.max_lines': def(z.number().int().min(1).max(50), 50, {
+    scope: 'prison',
+    exposed: true,
+    label: 'จำนวนรายการสูงสุดต่อคำสั่งซื้อ'
+  }),
 
   'visit.horizon_weeks': def(z.number().int().min(1).max(12), 4, {
     scope: 'prison',
@@ -96,7 +108,12 @@ export const REGISTRY = {
       })
     ),
     [
-      { name: 'แพ็กเกจ 10 ฉบับ (ส่งเข้าเรือนจำ)', direction: 'to_prison', priceSatang: 10000, quota: 10 },
+      {
+        name: 'แพ็กเกจ 10 ฉบับ (ส่งเข้าเรือนจำ)',
+        direction: 'to_prison',
+        priceSatang: 10000,
+        quota: 10
+      },
       { name: 'แพ็กเกจ 10 ฉบับ (ส่งกลับบ้าน)', direction: 'to_home', priceSatang: 10000, quota: 10 }
     ],
     { label: 'แพ็กเกจจดหมายอิเล็กทรอนิกส์' }

@@ -5,10 +5,13 @@ deposits, e-letters, visit booking, payments and reports — all sliced by
 `prison → แดน (zone)`.
 
 Three deployables, one database, no cloud primitives. See [`Plan.md`](Plan.md)
-for the full design and [`docs/PHASE-0.md`](docs/PHASE-0.md) for what is built
-so far.
+for the full design, [`docs/PHASE-0.md`](docs/PHASE-0.md) for the foundation and
+[`docs/PHASE-1.md`](docs/PHASE-1.md) for catalog and orders.
 
-**Status: Phase 0 (Foundation) complete.** Phase 0b onward is not started.
+**Status: Phase 1 (Catalog + Orders) complete.** A relative can place an unpaid
+order end to end and staff can fulfil it. Phase 2 (Payments) is not started;
+Phase 0b (inmate import) is still outstanding — inmate records are seeded and
+editable, but there is no XLSX/CSV importer yet.
 
 ---
 
@@ -49,6 +52,9 @@ Password is `password123` for all of them.
 | Admin :5174 | `superadmin` | all facilities, only role that can manage staff |
 | Admin :5174 | `klp.admin` | เรือนจำกลางคลองเปรม only |
 | Admin :5174 | `bkw.admin` | เรือนจำกลางบางขวาง only |
+
+The seed also creates 4 shops, 30 products across 5 categories, and 2 orders
+placed through the real ordering service.
 
 ### Commands
 
@@ -99,7 +105,7 @@ Inside `apps/api/src`:
 db/          schema/ · migrations/ · seed/ · client.ts (pragmas) · migrate.ts · reset.ts
 lib/         auth/ (providers, realms) · jobs/ · notify/ · storage/ · password.ts · hook.ts
 middleware/  prison-scope.ts · error.ts · request-id.ts
-modules/     auth · me · prisons · admin · settings — one folder per feature
+modules/     auth · me · prisons · catalog · orders · admin · settings — one per feature
 app.ts       route tree, CORS, OpenAPI document
 env.ts       parsed + validated environment
 ```
@@ -122,6 +128,13 @@ env.ts       parsed + validated environment
   `scopeFilter`, `resolvePrisonId` and `assertInScope` — nothing else.
 - **Every setting is declared in code** (`modules/settings/registry.ts`) with a
   Zod schema and a default. Unknown keys are rejected on write.
+- **The server owns the price.** A cart carries product ids and quantities;
+  every line is re-priced from `products` on the way in.
+- **Order lines snapshot the product.** Name, price, unit and category are
+  copied onto the line, so a later catalog edit cannot rewrite a past order or
+  last month's report. The same rule applies to the inmate's zone.
+- **Lists paginate by keyset, never offset.** The cursor is opaque; a row must
+  not appear twice because the catalog changed between pages.
 - **The access token never touches `localStorage`.** It lives in the client
   closure; the refresh token is an httpOnly cookie. The LINE in-app webview
   shares storage across the whole origin.
@@ -164,7 +177,9 @@ The contract is the source of truth; work outward from it.
 3. **Scope** — admin routes take a `PrisonScope` from `middleware/prison-scope.ts`
    and pass it to every query helper. No exceptions.
 4. **Mount** — wire the route group in `apps/api/src/app.ts` under the right
-   realm (`/api/v1/...` for customers, `/api/v1/admin/...` for staff).
+   realm (`/api/v1/...` for customers, `/api/v1/admin/...` for staff). A module
+   with both faces keeps them in `routes.ts` and `admin-routes.ts`
+   (`modules/orders/` is the pattern to copy).
 5. **Client** — add the typed method to `packages/contract/src/client.ts`.
 6. **Test** — an integration test in `apps/api/test/`, against the real
    migrations. Cover the unhappy paths: wrong realm, cross-prison access,

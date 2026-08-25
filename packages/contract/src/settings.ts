@@ -11,7 +11,11 @@ export const PublicSettings = z.object({
     lineOfficial: z.string(),
     addressTh: z.string()
   }),
-  order: z.object({ cutoffTime: z.string() }),
+  order: z.object({
+    cutoffTime: z.string(),
+    enforceShopHours: z.boolean(),
+    maxLines: z.number().int()
+  }),
   visit: z.object({ horizonWeeks: z.number().int(), bookingCutoffHours: z.number().int() }),
   payment: z.object({ qrTtlMinutes: z.number().int() }),
   features: z.object({ lineLogin: z.boolean() })

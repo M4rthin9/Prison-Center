@@ -7,7 +7,10 @@ import type { Notification, NotifierAdapter } from './types.js'
  * `data/outbox.log` so a dev can read exactly what a relative would receive.
  * Also delegates to the in-app notifier so the in-app list stays populated.
  */
-export function createConsoleNotifier(outboxPath: string, inner?: NotifierAdapter): NotifierAdapter {
+export function createConsoleNotifier(
+  outboxPath: string,
+  inner?: NotifierAdapter
+): NotifierAdapter {
   fs.mkdirSync(path.dirname(outboxPath), { recursive: true })
   return {
     kind: 'console',

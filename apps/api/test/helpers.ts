@@ -51,10 +51,7 @@ export function createClient(app: TestApp): TestClient {
       }
       headers.set('x-forwarded-for', ip)
       if (client.cookies.size > 0) {
-        headers.set(
-          'cookie',
-          [...client.cookies].map(([k, v]) => `${k}=${v}`).join('; ')
-        )
+        headers.set('cookie', [...client.cookies].map(([k, v]) => `${k}=${v}`).join('; '))
       }
 
       const res = await app.request(`http://localhost${path}`, {
@@ -107,7 +104,11 @@ export function setupApp(): SeededApp {
 
 export const DEV_PASSWORD = 'password123'
 
-export async function loginCustomer(app: TestApp, username = '0812345678', password = DEV_PASSWORD) {
+export async function loginCustomer(
+  app: TestApp,
+  username = '0812345678',
+  password = DEV_PASSWORD
+) {
   const client = createClient(app)
   const res = await client.request(`${BASE}/auth/login`, {
     method: 'POST',

@@ -39,7 +39,9 @@ export async function login(
 ): Promise<IssuedSession> {
   const db = ctx.db ?? defaultDb()
   const username =
-    spec.realm === 'customer' ? (normalizeThaiPhone(input.username) ?? input.username) : input.username.trim()
+    spec.realm === 'customer'
+      ? (normalizeThaiPhone(input.username) ?? input.username)
+      : input.username.trim()
 
   // Per-IP throttle stops a spray across many accounts from one host; the
   // per-username count is the account lockout inside the provider.
@@ -108,7 +110,11 @@ export async function registerCustomer(
   const phone = normalizeThaiPhone(input.phone)
   if (!phone) throw badRequest('เบอร์มือถือไม่ถูกต้อง', { phone: ['เบอร์มือถือไม่ถูกต้อง'] })
 
-  const existing = db.select({ id: customers.id }).from(customers).where(eq(customers.username, phone)).get()
+  const existing = db
+    .select({ id: customers.id })
+    .from(customers)
+    .where(eq(customers.username, phone))
+    .get()
   if (existing) throw conflict('เบอร์มือถือนี้ลงทะเบียนแล้ว')
 
   const passwordHash = await hashPassword(input.password)

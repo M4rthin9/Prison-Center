@@ -13,6 +13,10 @@ import { createAuthRoutes } from './modules/auth/routes.js'
 import { customerPasswordProvider, staffPasswordProvider } from './modules/auth/service.js'
 import { createMeRoutes } from './modules/me/routes.js'
 import { createPrisonRoutes } from './modules/prisons/routes.js'
+import { createCatalogRoutes } from './modules/catalog/routes.js'
+import { createAdminCatalogRoutes } from './modules/catalog/admin-routes.js'
+import { createOrderRoutes } from './modules/orders/routes.js'
+import { createAdminOrderRoutes } from './modules/orders/admin-routes.js'
 import { createAdminRoutes } from './modules/admin/routes.js'
 import { createAdminSettingsRoutes, createPublicSettingsRoutes } from './modules/settings/routes.js'
 import type { AppEnv } from './types.js'
@@ -34,7 +38,7 @@ export function createApp() {
     cors({
       // Credentialed requests cannot use a wildcard origin — the allowlist is
       // the CORS_ORIGINS env var, one entry per deployed front end.
-      origin: (origin) => (e.CORS_ORIGINS.includes(origin) ? origin : e.CORS_ORIGINS[0] ?? ''),
+      origin: (origin) => (e.CORS_ORIGINS.includes(origin) ? origin : (e.CORS_ORIGINS[0] ?? '')),
       credentials: true,
       allowMethods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
       allowHeaders: ['Content-Type', 'Authorization', 'X-Request-Id'],
@@ -60,6 +64,9 @@ export function createApp() {
   )
   api.route('/me', createMeRoutes())
   api.route('/prisons', createPrisonRoutes())
+  // /shops, /categories, /products — browsing needs no session.
+  api.route('/', createCatalogRoutes())
+  api.route('/orders', createOrderRoutes())
   api.route('/settings', createPublicSettingsRoutes())
 
   /* staff realm — same session shape, separate cookie, separate route tree */
@@ -73,6 +80,8 @@ export function createApp() {
     })
   )
   api.route('/admin/settings', createAdminSettingsRoutes())
+  api.route('/admin', createAdminCatalogRoutes())
+  api.route('/admin', createAdminOrderRoutes())
   api.route('/admin', createAdminRoutes())
 
   app.route(API_PREFIX, api)
@@ -82,7 +91,10 @@ export function createApp() {
     const rel = path.relative(process.cwd(), e.paths.uploads).split(path.sep).join('/')
     app.use(
       `${e.STORAGE_PUBLIC_PATH}/*`,
-      serveStatic({ root: rel || '.', rewriteRequestPath: (p) => p.replace(e.STORAGE_PUBLIC_PATH, '') })
+      serveStatic({
+        root: rel || '.',
+        rewriteRequestPath: (p) => p.replace(e.STORAGE_PUBLIC_PATH, '')
+      })
     )
   }
 

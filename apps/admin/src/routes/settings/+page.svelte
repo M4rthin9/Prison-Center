@@ -191,7 +191,8 @@
   {/if}
 
   <p class="text-sm text-muted">
-    ค่าถูกตรวจสอบด้วย Zod ฝั่งเซิร์ฟเวอร์ก่อนบันทึกเสมอ และการแก้ไขทุกครั้งถูกบันทึกลง audit log
-    ({formatDateTime(Date.now())})
+    ค่าถูกตรวจสอบด้วย Zod ฝั่งเซิร์ฟเวอร์ก่อนบันทึกเสมอ และการแก้ไขทุกครั้งถูกบันทึกลง audit log ({formatDateTime(
+      Date.now()
+    )})
   </p>
 </div>

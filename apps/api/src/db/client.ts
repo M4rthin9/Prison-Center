@@ -7,6 +7,10 @@ import { env } from '../env.js'
 import * as schema from './schema/index.js'
 
 export type Db = ReturnType<typeof drizzle<typeof schema>>
+/** The handle passed to a `db.transaction` callback. */
+export type Tx = Parameters<Parameters<Db['transaction']>[0]>[0]
+/** Anything that can run a statement — use it for helpers called inside a tx. */
+export type DbOrTx = Db | Tx
 export type Sqlite = Database.Database
 
 /**

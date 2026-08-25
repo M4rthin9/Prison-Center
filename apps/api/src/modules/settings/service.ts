@@ -4,7 +4,13 @@ import { settings } from '../../db/schema/index.js'
 import { badRequest } from '../../lib/errors.js'
 import { writeAudit } from '../../lib/audit.js'
 import { now } from '../../lib/time.js'
-import { REGISTRY, isSettingKey, settingKeys, type SettingKey, type SettingValue } from './registry.js'
+import {
+  REGISTRY,
+  isSettingKey,
+  settingKeys,
+  type SettingKey,
+  type SettingValue
+} from './registry.js'
 
 /**
  * Reads fall back through: prison override → global row → declared default.
@@ -21,7 +27,13 @@ export function getSetting<K extends SettingKey>(
     const row = db
       .select()
       .from(settings)
-      .where(and(eq(settings.key, key), eq(settings.scope, 'prison'), eq(settings.scopeId, opts.prisonId)))
+      .where(
+        and(
+          eq(settings.key, key),
+          eq(settings.scope, 'prison'),
+          eq(settings.scopeId, opts.prisonId)
+        )
+      )
       .get()
     const parsed = row && def.schema.safeParse(JSON.parse(row.valueJson))
     if (parsed?.success) return parsed.data as SettingValue<K>
@@ -144,7 +156,11 @@ export function publicSettings(opts: { prisonId?: string | null; db?: Db } = {})
       lineOfficial: g('contact.line_official'),
       addressTh: g('contact.address_th')
     },
-    order: { cutoffTime: g('order.cutoff_time') },
+    order: {
+      cutoffTime: g('order.cutoff_time'),
+      enforceShopHours: g('order.enforce_shop_hours'),
+      maxLines: g('order.max_lines')
+    },
     visit: {
       horizonWeeks: g('visit.horizon_weeks'),
       bookingCutoffHours: g('visit.booking_cutoff_hours')
