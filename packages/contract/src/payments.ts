@@ -216,6 +216,8 @@ export const PaymentView = z.object({
   orderNo: z.string().nullable(),
   /** The same, for `purpose = deposit`. Exactly one of the two is ever set. */
   depositNo: z.string().nullable(),
+  /** Set when `purpose='letter_package'` — the coupon purchase being paid for. */
+  letterPurchaseNo: z.string().nullable(),
   rail: PaymentRail,
   channelId: Ulid,
   channelName: z.string(),
@@ -254,6 +256,8 @@ export const PaymentSummary = z.object({
   purposeId: Ulid,
   orderNo: z.string().nullable(),
   depositNo: z.string().nullable(),
+  /** Set when `purpose='letter_package'` — the coupon purchase being paid for. */
+  letterPurchaseNo: z.string().nullable(),
   prisonId: Ulid,
   prisonName: z.string().nullable(),
   rail: PaymentRail,

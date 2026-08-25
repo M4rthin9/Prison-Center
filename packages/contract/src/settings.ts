@@ -23,6 +23,10 @@ export const PublicSettings = z.object({
     maxSatang: z.number().int(),
     requireCard: z.boolean()
   }),
+  letter: z.object({
+    maxChars: z.number().int(),
+    maxAttachments: z.number().int()
+  }),
   features: z.object({ lineLogin: z.boolean() })
 })
 export type PublicSettings = z.infer<typeof PublicSettings>

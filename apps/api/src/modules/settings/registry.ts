@@ -116,8 +116,31 @@ export const REGISTRY = {
       },
       { name: 'แพ็กเกจ 10 ฉบับ (ส่งกลับบ้าน)', direction: 'to_home', priceSatang: 10000, quota: 10 }
     ],
-    { label: 'แพ็กเกจจดหมายอิเล็กทรอนิกส์' }
+    { label: 'แพ็กเกจจดหมายอิเล็กทรอนิกส์ (ค่าตั้งต้นตอน seed)' }
   ),
+  // A letter is typed on a phone and printed on one A4 sheet. The ceiling is
+  // what the template can hold, not an arbitrary product limit.
+  'letter.max_chars': def(z.number().int().min(200).max(20000), 3000, {
+    scope: 'prison',
+    exposed: true,
+    label: 'ความยาวจดหมายสูงสุด (ตัวอักษร)'
+  }),
+  'letter.max_attachments': def(z.number().int().min(0).max(10), 3, {
+    scope: 'prison',
+    exposed: true,
+    label: 'จำนวนรูปแนบต่อจดหมาย'
+  }),
+  // One batch is one walk to one แดน with one stack of paper.
+  'letter.batch_max': def(z.number().int().min(1).max(200), 50, {
+    scope: 'prison',
+    label: 'จำนวนจดหมายสูงสุดต่อรอบพิมพ์'
+  }),
+  // Off means a scanned reply lands in the app whether or not the family holds
+  // a ส่งกลับบ้าน coupon. On is the p.12 prepaid model.
+  'letter.reply_consumes_credit': def(z.boolean(), true, {
+    scope: 'prison',
+    label: 'จดหมายตอบกลับใช้สิทธิ์แพ็กเกจ "ส่งกลับบ้าน"'
+  }),
 
   'payment.channel_default': def(z.string().nullable(), null, {
     scope: 'prison',

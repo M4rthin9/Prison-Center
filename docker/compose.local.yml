@@ -13,6 +13,8 @@ name: prison-commerce-local
 
 services:
   api:
+    # CI pushes this to ghcr.io; locally built via Dockerfile.api when absent.
+    image: ghcr.io/m4rthin9/prison-api:latest
     build:
       context: ..
       dockerfile: docker/Dockerfile.api
@@ -31,6 +33,7 @@ services:
       - '18787:8787'
 
   liff:
+    image: ghcr.io/m4rthin9/prison-liff:latest
     build:
       context: ..
       dockerfile: docker/Dockerfile.web
@@ -46,6 +49,7 @@ services:
       - api
 
   admin:
+    image: ghcr.io/m4rthin9/prison-admin:latest
     build:
       context: ..
       dockerfile: docker/Dockerfile.web

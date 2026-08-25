@@ -67,7 +67,7 @@ export async function normalizeSlip(input: Buffer, declaredType?: string): Promi
 const decodeQr = ((jsqr as unknown as { default?: unknown }).default ??
   jsqr) as typeof import('jsqr').default
 
-interface Attempt {
+export interface Attempt {
   /** Fractional crop of the source, or null for the whole image. */
   region: { left: number; top: number; width: number; height: number } | null
   scale: number
@@ -107,13 +107,19 @@ function toRgba(raw: Buffer, channels: number): Uint8ClampedArray {
   return out
 }
 
-export async function decodeMiniQr(image: Buffer): Promise<string | null> {
+export const decodeMiniQr = (image: Buffer) => decodeQrIn(image, ATTEMPTS)
+
+/**
+ * The generic pass: try each crop-and-upscale attempt in order, first hit wins.
+ * Phase 4 reuses it for the reply-form QR, which sits somewhere else entirely.
+ */
+export async function decodeQrIn(image: Buffer, attempts: Attempt[]): Promise<string | null> {
   const meta = await sharp(image).metadata()
   const srcW = meta.width ?? 0
   const srcH = meta.height ?? 0
   if (srcW === 0 || srcH === 0) return null
 
-  for (const attempt of ATTEMPTS) {
+  for (const attempt of attempts) {
     try {
       let pipeline = sharp(image).rotate()
       let w = srcW

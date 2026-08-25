@@ -80,3 +80,39 @@ export function nextDepositCardNo(
   const seq = nextSequence(`deposit_card:${prisonId}`, period, db)
   return `${prisonCode}-C${period}-${String(seq).padStart(4, '0')}`
 }
+
+/** `{PRISON_CODE}-L{YYMM}-{SEQ}` (§4.5) — and this is what the reply QR encodes. */
+export function nextLetterNo(
+  prisonId: string,
+  prisonCode: string,
+  db: DbOrTx = defaultDb(),
+  at = now()
+): string {
+  const period = bangkokMonth(at).replace('-', '').slice(2)
+  const seq = nextSequence(`letter:${prisonId}`, period, db)
+  return `${prisonCode}-L${period}-${String(seq).padStart(4, '0')}`
+}
+
+/** `{PRISON_CODE}-B{YYMM}-{SEQ}` — one print batch, one stack of paper. */
+export function nextLetterBatchNo(
+  prisonId: string,
+  prisonCode: string,
+  db: DbOrTx = defaultDb(),
+  at = now()
+): string {
+  const period = bangkokMonth(at).replace('-', '').slice(2)
+  const seq = nextSequence(`letter_batch:${prisonId}`, period, db)
+  return `${prisonCode}-B${period}-${String(seq).padStart(4, '0')}`
+}
+
+/** `{PRISON_CODE}-M{YYMM}-{SEQ}` — M for mail: a letter package purchase. */
+export function nextLetterPurchaseNo(
+  prisonId: string,
+  prisonCode: string,
+  db: DbOrTx = defaultDb(),
+  at = now()
+): string {
+  const period = bangkokMonth(at).replace('-', '').slice(2)
+  const seq = nextSequence(`letter_purchase:${prisonId}`, period, db)
+  return `${prisonCode}-M${period}-${String(seq).padStart(4, '0')}`
+}

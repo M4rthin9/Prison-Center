@@ -171,6 +171,10 @@ export function publicSettings(opts: { prisonId?: string | null; db?: Db } = {})
       maxSatang: g('deposit.max_satang'),
       requireCard: g('deposit.require_card')
     },
+    letter: {
+      maxChars: g('letter.max_chars'),
+      maxAttachments: g('letter.max_attachments')
+    },
     features: { lineLogin: g('features.line_login') }
   }
 }
