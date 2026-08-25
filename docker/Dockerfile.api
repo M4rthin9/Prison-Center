@@ -29,6 +29,9 @@ ENV NODE_ENV=production
 COPY --from=build /app ./
 
 # The database and uploads live on a mounted volume so they survive a rebuild.
+# Named volumes inherit the image dir's ownership, so create it for `node`
+# before declaring the VOLUME.
+RUN mkdir -p /data && chown node:node /data
 VOLUME ["/data"]
 ENV DATABASE_PATH=/data/app.db \
     STORAGE_LOCAL_DIR=/data/uploads \

@@ -1,0 +1,63 @@
+# Local stack for Docker Desktop. Mirrors prod topology (static apps + one
+# API writer on SQLite) but on localhost ports, no TLS, no Litestream.
+#
+#   docker compose -f docker/compose.local.yml up --build
+#
+#     LIFF    http://localhost:5173
+#     Admin   http://localhost:5174
+#     API     http://localhost:8787  (also reachable directly)
+#
+# Seed dev fixtures (idempotent):
+#   docker compose -f docker/compose.local.yml exec api pnpm db:seed
+name: prison-commerce-local
+
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      PORT: '8787'
+      JWT_SECRET: local-docker-only-secret-change-me-0123456789abcdef
+      DATABASE_PATH: /data/app.db
+      STORAGE_LOCAL_DIR: /data/uploads
+      NOTIFIER_OUTBOX_PATH: /data/outbox.log
+    volumes:
+      - app_data:/data
+    ports:
+      - '8787:8787'
+
+  liff:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.web
+      target: serve
+      args:
+        APP: liff
+    restart: unless-stopped
+    environment:
+      API_UPSTREAM: api:8787
+    ports:
+      - '5173:80'
+    depends_on:
+      - api
+
+  admin:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.web
+      target: serve
+      args:
+        APP: admin
+    restart: unless-stopped
+    environment:
+      API_UPSTREAM: api:8787
+    ports:
+      - '5174:80'
+    depends_on:
+      - api
+
+volumes:
+  app_data:

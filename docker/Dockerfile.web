@@ -20,3 +20,12 @@ RUN pnpm --filter @pc/contract build && pnpm --filter @pc/${APP} build
 FROM scratch AS export
 ARG APP
 COPY --from=build /app/apps/${APP}/build /
+
+# ── Local (Docker Desktop) ──────────────────────────────────────────────────
+# Serves the static build directly and proxies /api + /files to the api
+# container. Same-origin, exactly like dev vite proxy and prod Caddy.
+FROM caddy:2-alpine AS serve
+ARG APP
+COPY --from=build /app/apps/${APP}/build /srv
+COPY docker/Caddyfile.local /etc/caddy/Caddyfile
+EXPOSE 80

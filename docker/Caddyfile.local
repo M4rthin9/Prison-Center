@@ -1,0 +1,24 @@
+# Local (Docker Desktop) edge for one static app. Same-origin for the API so
+# the httpOnly refresh cookie behaves as in production. API_UPSTREAM defaults
+# to the compose service name.
+:80 {
+	encode zstd gzip
+
+	handle /api/* {
+		reverse_proxy {$API_UPSTREAM:-api:8787}
+	}
+
+	handle /files/* {
+		reverse_proxy {$API_UPSTREAM:-api:8787}
+	}
+
+	handle {
+		try_files {path} /index.html
+		file_server
+	}
+
+	header {
+		X-Content-Type-Options nosniff
+		-Server
+	}
+}
