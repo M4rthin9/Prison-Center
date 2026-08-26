@@ -1,8 +1,16 @@
 # Single VPS, in-country (decision #5). One API process, Caddy in front,
 # Litestream replicating the SQLite file off-box.
 #
-# NOT YET EXERCISED — written from the plan (§10). Validate on a scratch VPS
-# and rehearse a restore before go-live.
+# Images come from GHCR (built by .github/workflows/docker.yml on push to
+# main) — nothing is compiled on the box. Deploy:
+#
+#   echo $GITHUB_PAT | docker login ghcr.io -u <user> --password-stdin  # read:packages
+#   git pull
+#   docker compose -f docker/compose.yml pull
+#   docker compose -f docker/compose.yml up -d
+#
+# NOT YET EXERCISED — validate on a scratch VPS and rehearse a restore
+# before go-live.
 name: prison-commerce
 
 services:
@@ -16,15 +24,13 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
-      - liff_build:/srv/shop:ro
-      - admin_build:/srv/admin:ro
     depends_on:
       - api
+      - liff
+      - admin
 
   api:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile.api
+    image: ghcr.io/m4rthin9/prison-api:latest
     restart: unless-stopped
     # Never set `deploy.replicas` or run this under cluster: one writer only.
     env_file: ../apps/api/.env.production
@@ -37,6 +43,28 @@ services:
       - app_data:/data
     expose:
       - '8787'
+
+  # Static builds shipped as self-contained Caddy images (Dockerfile.web
+  # target `serve`): SPA fallback + same-origin /api,/files proxy baked in.
+  liff:
+    image: ghcr.io/m4rthin9/prison-liff:latest
+    restart: unless-stopped
+    environment:
+      API_UPSTREAM: api:8787
+    expose:
+      - '80'
+    depends_on:
+      - api
+
+  admin:
+    image: ghcr.io/m4rthin9/prison-admin:latest
+    restart: unless-stopped
+    environment:
+      API_UPSTREAM: api:8787
+    expose:
+      - '80'
+    depends_on:
+      - api
 
   # Continuous replication protects against disk loss. The nightly
   # `VACUUM INTO` snapshot (see docs/RUNBOOK.md) protects against a bad
@@ -56,5 +84,3 @@ volumes:
   app_data:
   caddy_data:
   caddy_config:
-  liff_build:
-  admin_build:

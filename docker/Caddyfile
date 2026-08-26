@@ -3,12 +3,12 @@
 }
 
 # ── customer app (relatives) ────────────────────────────────────────────────
+# Static apps run as self-contained Caddy images (Dockerfile.web `serve`);
+# the edge terminates TLS and proxies. SPA fallback and same-origin /api
+# proxying live inside those containers.
 shop.example.go.th {
-	root * /srv/shop
 	encode zstd gzip
-	# SPA fallback: adapter-static emits index.html as the fallback document.
-	try_files {path} /index.html
-	file_server
+	reverse_proxy liff:80
 
 	header {
 		X-Content-Type-Options nosniff
@@ -25,10 +25,8 @@ admin.example.go.th {
 	@notallowed not remote_ip 203.0.113.0/24 10.8.0.0/24
 	respond @notallowed "Not available from this network" 403
 
-	root * /srv/admin
 	encode zstd gzip
-	try_files {path} /index.html
-	file_server
+	reverse_proxy admin:80
 
 	header {
 		X-Content-Type-Options nosniff
