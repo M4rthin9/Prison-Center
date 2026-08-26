@@ -14,6 +14,8 @@ COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 COPY packages ./packages
 COPY apps/${APP} ./apps/${APP}
 RUN pnpm install --frozen-lockfile --filter @pc/${APP}...
+# Set empty PUBLIC_API_BASE_URL for same-origin API (reverse proxy via Caddy)
+RUN echo 'PUBLIC_API_BASE_URL=' > apps/${APP}/.env.production
 RUN pnpm --filter @pc/contract build && pnpm --filter @pc/${APP} build
 
 # The build stage is the artifact: compose copies `build/` into the Caddy volume.
