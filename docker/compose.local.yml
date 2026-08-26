@@ -1,11 +1,15 @@
 # Local stack for Docker Desktop. Mirrors prod topology (static apps + one
 # API writer on SQLite) but on localhost ports, no TLS, no Litestream.
 #
-#   docker compose -f docker/compose.local.yml up --build
+#   docker compose -f docker/compose.local.yml up -d
 #
 #     LIFF    http://localhost:5173
 #     Admin   http://localhost:5174
-#     API     http://localhost:8787  (also reachable directly)
+#     API     http://localhost:18787  (also reachable directly)
+#
+# Auto-update: CI pushes :latest to Docker Hub on every push to main;
+# watchtower polls and recreates changed services. Credentials for private
+# repos come from docker/.env (see .env.example).
 #
 # Seed dev fixtures (idempotent):
 #   docker compose -f docker/compose.local.yml exec api pnpm db:seed
@@ -13,12 +17,14 @@ name: prison-commerce-local
 
 services:
   api:
-    # Locally built via Dockerfile.api
-    image: prison-commerce-local-api:latest
+    # Published by GitHub Actions (build-deploy.yml) on push to main.
+    image: m4rthin9/prison-api:latest
     build:
       context: ..
       dockerfile: docker/Dockerfile.api
     restart: unless-stopped
+    labels:
+      com.centurylinkfoundation.watchtower.enable: 'true'
     environment:
       NODE_ENV: development
       PORT: '8787'
@@ -33,7 +39,7 @@ services:
       - '18787:8787'
 
   liff:
-    image: prison-commerce-local-liff:latest
+    image: m4rthin9/prison-liff:latest
     build:
       context: ..
       dockerfile: docker/Dockerfile.web
@@ -41,6 +47,8 @@ services:
       args:
         APP: liff
     restart: unless-stopped
+    labels:
+      com.centurylinkfoundation.watchtower.enable: 'true'
     environment:
       API_UPSTREAM: api:8787
     ports:
@@ -49,7 +57,7 @@ services:
       - api
 
   admin:
-    image: prison-commerce-local-admin:latest
+    image: m4rthin9/prison-admin:latest
     build:
       context: ..
       dockerfile: docker/Dockerfile.web
@@ -57,12 +65,28 @@ services:
       args:
         APP: admin
     restart: unless-stopped
+    labels:
+      com.centurylinkfoundation.watchtower.enable: 'true'
     environment:
       API_UPSTREAM: api:8787
     ports:
       - '5174:80'
     depends_on:
       - api
+
+  # Polls Docker Hub for new :latest of the labelled services above and
+  # recreates them in place. Volumes survive; only containers are replaced.
+  watchtower:
+    image: containrrr/watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      WATCHTOWER_POLL_INTERVAL: '300' # seconds between registry checks
+      WATCHTOWER_LABEL_ENABLE: 'true' # only watch labelled containers
+      WATCHTOWER_CLEANUP: 'true' # remove stale images after update
+      REPO_USER: ${DOCKERHUB_USERNAME:-}
+      REPO_PASS: ${DOCKERHUB_TOKEN:-}
 
 volumes:
   app_data:

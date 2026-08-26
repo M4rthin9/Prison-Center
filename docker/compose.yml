@@ -1,10 +1,10 @@
 # Single VPS, in-country (decision #5). One API process, Caddy in front,
 # Litestream replicating the SQLite file off-box.
 #
-# Images come from GHCR (built by .github/workflows/docker.yml on push to
-# main) — nothing is compiled on the box. Deploy:
+# Images come from Docker Hub (built by .github/workflows/build-deploy.yml on
+# push to main) — nothing is compiled on the box. Deploy:
 #
-#   echo $GITHUB_PAT | docker login ghcr.io -u <user> --password-stdin  # read:packages
+#   docker login  # once; or set DOCKERHUB_USERNAME/TOKEN in docker/.env
 #   git pull
 #   docker compose -f docker/compose.yml pull
 #   docker compose -f docker/compose.yml up -d
@@ -30,7 +30,7 @@ services:
       - admin
 
   api:
-    image: ghcr.io/m4rthin9/prison-api:latest
+    image: m4rthin9/prison-api:latest
     restart: unless-stopped
     # Never set `deploy.replicas` or run this under cluster: one writer only.
     env_file: ../apps/api/.env.production
@@ -47,7 +47,7 @@ services:
   # Static builds shipped as self-contained Caddy images (Dockerfile.web
   # target `serve`): SPA fallback + same-origin /api,/files proxy baked in.
   liff:
-    image: ghcr.io/m4rthin9/prison-liff:latest
+    image: m4rthin9/prison-liff:latest
     restart: unless-stopped
     environment:
       API_UPSTREAM: api:8787
@@ -57,7 +57,7 @@ services:
       - api
 
   admin:
-    image: ghcr.io/m4rthin9/prison-admin:latest
+    image: m4rthin9/prison-admin:latest
     restart: unless-stopped
     environment:
       API_UPSTREAM: api:8787

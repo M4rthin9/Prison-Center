@@ -81,55 +81,42 @@ docker compose -f compose.local.yml build --no-cache
 
 ## Pushing to Registries
 
-### GitHub Container Registry (GHCR)
+### Docker Hub (the only registry)
 
-Automatically pushed by GitHub Actions on push to main branch.
+Images are pushed automatically by GitHub Actions on push to `main`:
 
-Manual push:
-```bash
-docker login ghcr.io -u <username> -p <personal-access-token>
-docker tag prison-commerce-local-api:latest ghcr.io/<username>/prison-api:latest
-docker push ghcr.io/<username>/prison-api:latest
-```
+- `m4rthin9/prison-api:latest` (+ `:<sha>`)
+- `m4rthin9/prison-liff:latest`
+- `m4rthin9/prison-admin:latest`
 
-### Docker Hub
-
-```bash
-./push-to-docker-hub.sh <docker-hub-username>
-```
-
-Or manually:
+Manual push from a local build:
 ```bash
 docker login docker.io
-docker tag prison-commerce-local-api:latest <username>/prison-api:latest
-docker push <username>/prison-api:latest
+./docker-deploy.ps1 push-hub -DockerHubUsername m4rthin9
 ```
 
 ## CI/CD Setup
 
 ### GitHub Actions
 
-Two workflows are configured:
+One workflow: **build-deploy.yml** — builds all three images and pushes to
+Docker Hub on every push to `main` (or manual `workflow_dispatch`).
 
-1. **docker.yml** - Existing workflow pushing to GHCR on main push
-2. **build-deploy.yml** - New comprehensive workflow with Docker Hub support
+#### Required secrets (Repository → Settings → Secrets and variables → Actions)
 
-#### Configure Docker Hub Secrets (Optional)
+| Secret | Value |
+|---|---|
+| `DOCKERHUB_USERNAME` | `m4rthin9` |
+| `DOCKERHUB_TOKEN` | Docker Hub → Account Settings → Personal access token |
 
-In your GitHub repository settings, add:
-- `DOCKER_HUB_USERNAME` - Your Docker Hub username
-- `DOCKER_HUB_PASSWORD` - Your Docker Hub personal access token
+#### Auto-redeploy on Docker Desktop
 
-#### Trigger Workflow
+`docker/compose.local.yml` runs a **watchtower** container that polls Docker
+Hub every 5 minutes (`WATCHTOWER_POLL_INTERVAL`) and recreates any labelled
+service whose image changed. For private repos, copy
+`docker/.env.example` → `docker/.env` and fill in your credentials.
 
-```bash
-git push origin main
-```
-
-Or manually trigger:
-```bash
-gh workflow run build-deploy.yml
-```
+Full cycle: `git push` → Actions builds → Hub updated → watchtower redeploys.
 
 ## Environment Configuration
 
