@@ -18,7 +18,7 @@ name: prison-commerce-local
 services:
   api:
     # Published by GitHub Actions (build-deploy.yml) on push to main.
-    image: m4rthin9/prison-api:latest
+    image: cidabumbadklang/prison-api:latest
     build:
       context: ..
       dockerfile: docker/Dockerfile.api
@@ -39,7 +39,7 @@ services:
       - '18787:8787'
 
   liff:
-    image: m4rthin9/prison-liff:latest
+    image: cidabumbadklang/prison-liff:latest
     build:
       context: ..
       dockerfile: docker/Dockerfile.web
@@ -57,7 +57,7 @@ services:
       - api
 
   admin:
-    image: m4rthin9/prison-admin:latest
+    image: cidabumbadklang/prison-admin:latest
     build:
       context: ..
       dockerfile: docker/Dockerfile.web

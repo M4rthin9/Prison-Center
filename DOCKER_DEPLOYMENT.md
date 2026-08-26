@@ -85,14 +85,14 @@ docker compose -f compose.local.yml build --no-cache
 
 Images are pushed automatically by GitHub Actions on push to `main`:
 
-- `m4rthin9/prison-api:latest` (+ `:<sha>`)
-- `m4rthin9/prison-liff:latest`
-- `m4rthin9/prison-admin:latest`
+- `cidabumbadklang/prison-api:latest` (+ `:<sha>`)
+- `cidabumbadklang/prison-liff:latest`
+- `cidabumbadklang/prison-admin:latest`
 
 Manual push from a local build:
 ```bash
 docker login docker.io
-./docker-deploy.ps1 push-hub -DockerHubUsername m4rthin9
+./docker-deploy.ps1 push-hub -DockerHubUsername cidabumbadklang
 ```
 
 ## CI/CD Setup
@@ -106,7 +106,7 @@ Docker Hub on every push to `main` (or manual `workflow_dispatch`).
 
 | Secret | Value |
 |---|---|
-| `DOCKERHUB_USERNAME` | `m4rthin9` |
+| `DOCKERHUB_USERNAME` | `cidabumbadklang` |
 | `DOCKERHUB_TOKEN` | Docker Hub → Account Settings → Personal access token |
 
 #### Auto-redeploy on Docker Desktop

@@ -30,7 +30,7 @@ services:
       - admin
 
   api:
-    image: m4rthin9/prison-api:latest
+    image: cidabumbadklang/prison-api:latest
     restart: unless-stopped
     # Never set `deploy.replicas` or run this under cluster: one writer only.
     env_file: ../apps/api/.env.production
@@ -47,7 +47,7 @@ services:
   # Static builds shipped as self-contained Caddy images (Dockerfile.web
   # target `serve`): SPA fallback + same-origin /api,/files proxy baked in.
   liff:
-    image: m4rthin9/prison-liff:latest
+    image: cidabumbadklang/prison-liff:latest
     restart: unless-stopped
     environment:
       API_UPSTREAM: api:8787
@@ -57,7 +57,7 @@ services:
       - api
 
   admin:
-    image: m4rthin9/prison-admin:latest
+    image: cidabumbadklang/prison-admin:latest
     restart: unless-stopped
     environment:
       API_UPSTREAM: api:8787
