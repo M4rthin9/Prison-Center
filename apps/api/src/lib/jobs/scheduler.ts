@@ -3,6 +3,7 @@ import { db } from '../../db/client.js'
 import { customerRealm, staffRealm } from '../auth/realms.js'
 import { expireDuePayments } from '../../modules/payments/service.js'
 import { markBatchFailed, renderBatch } from '../../modules/letters/service.js'
+import { materializeAll, sendVisitReminders } from '../../modules/visits/service.js'
 import { MINUTE, now } from '../time.js'
 import {
   claimNext,
@@ -39,6 +40,12 @@ export const handlers: Partial<Record<JobKind, JobHandler>> = {
       throw err
     }
   },
+
+  // §4.6: the template becomes rows N weeks ahead. Idempotent, and it never
+  // touches a row a staff member has edited — so it is safe to run hourly.
+  'visit.schedule.materialize': () => materializeAll(),
+
+  'visit.reminder': () => sendVisitReminders(),
 
   'session.purge': () => {
     const at = now()
@@ -109,6 +116,8 @@ export function startScheduler(intervalMs = 5_000): Scheduler {
     try {
       requeueStale()
       enqueue('session.purge')
+      enqueue('visit.schedule.materialize')
+      enqueue('visit.reminder')
     } catch (err) {
       console.error('[jobs] housekeeping failed', err)
     }

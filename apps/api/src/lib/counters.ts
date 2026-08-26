@@ -116,3 +116,15 @@ export function nextLetterPurchaseNo(
   const seq = nextSequence(`letter_purchase:${prisonId}`, period, db)
   return `${prisonCode}-M${period}-${String(seq).padStart(4, '0')}`
 }
+
+/** `{PRISON_CODE}-V{YYMM}-{SEQ}` (§4.6) — the number read aloud at the gate. */
+export function nextVisitBookingNo(
+  prisonId: string,
+  prisonCode: string,
+  db: DbOrTx = defaultDb(),
+  at = now()
+): string {
+  const period = bangkokMonth(at).replace('-', '').slice(2)
+  const seq = nextSequence(`visit:${prisonId}`, period, db)
+  return `${prisonCode}-V${period}-${String(seq).padStart(4, '0')}`
+}

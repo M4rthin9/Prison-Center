@@ -97,6 +97,35 @@ export const REGISTRY = {
     exposed: true,
     label: 'ปิดรับจองก่อนเวลาเยี่ยม (ชั่วโมง)'
   }),
+  // The number of people on one booking is a gate-sheet fact, not a capacity
+  // one: a cell counts bookings, because a cell is a table in a visit room.
+  'visit.max_visitors_per_booking': def(z.number().int().min(1).max(10), 3, {
+    scope: 'prison',
+    exposed: true,
+    label: 'จำนวนผู้เยี่ยมสูงสุดต่อการจอง 1 ครั้ง'
+  }),
+  'visit.default_capacity': def(z.number().int().min(1).max(9999), 20, {
+    scope: 'prison',
+    exposed: false,
+    label: 'ความจุตั้งต้นของช่องเยี่ยมที่สร้างใหม่'
+  }),
+  // Off means a booking lands as `pending` and staff confirm it by hand — some
+  // facilities want a human between the family and the visit room.
+  'visit.auto_confirm': def(z.boolean(), true, {
+    scope: 'prison',
+    exposed: true,
+    label: 'ยืนยันการจองอัตโนมัติ'
+  }),
+  'visit.reminder_hours': def(z.number().int().min(0).max(168), 24, {
+    scope: 'prison',
+    exposed: false,
+    label: 'แจ้งเตือนล่วงหน้าก่อนวันเยี่ยม (ชั่วโมง)'
+  }),
+  'visit.max_open_per_inmate': def(z.number().int().min(1).max(20), 2, {
+    scope: 'prison',
+    exposed: true,
+    label: 'จำนวนการจองที่ยังไม่ถึงวันเยี่ยมสูงสุดต่อผู้ต้องขัง'
+  }),
 
   'letter.packages': def(
     z.array(

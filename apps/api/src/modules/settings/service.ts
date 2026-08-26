@@ -163,7 +163,10 @@ export function publicSettings(opts: { prisonId?: string | null; db?: Db } = {})
     },
     visit: {
       horizonWeeks: g('visit.horizon_weeks'),
-      bookingCutoffHours: g('visit.booking_cutoff_hours')
+      bookingCutoffHours: g('visit.booking_cutoff_hours'),
+      maxVisitorsPerBooking: g('visit.max_visitors_per_booking'),
+      autoConfirm: g('visit.auto_confirm'),
+      maxOpenPerInmate: g('visit.max_open_per_inmate')
     },
     payment: { qrTtlMinutes: g('payment.qr.ttl_minutes') },
     deposit: {

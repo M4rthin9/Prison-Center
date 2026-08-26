@@ -4,6 +4,14 @@ import { env } from '../../env.js'
 import {
   categories,
   counters,
+  letterAttachments,
+  letterBatches,
+  letterCreditLedger,
+  letterPackages,
+  letterPurchases,
+  letters,
+  paymentChannels,
+  payments,
   depositCards,
   deposits,
   customerInmates,
@@ -16,6 +24,10 @@ import {
   shopHours,
   shops,
   staff,
+  visitBookings,
+  visitRounds,
+  visitScheduleDays,
+  visitScheduleTemplates,
   workDivisions,
   zones
 } from '../schema/index.js'
@@ -37,6 +49,7 @@ import { onLetterPurchasePaymentVerified } from '../../modules/letters/status.js
 import { seedCatalog } from './catalog.js'
 import { seedLetterPackages } from './letters.js'
 import { seedPaymentChannels } from './payments.js'
+import { seedVisits } from './visits.js'
 
 /**
  * Dev fixtures. Deterministic and idempotent: running it twice leaves the same
@@ -119,8 +132,22 @@ export async function seed(db: Db) {
       .get()?.n ?? 0
   if (existing > 0) {
     console.log('• database already seeded — clearing dev data first')
+    // Reverse dependency order. Every table that holds a `restrict` FK back to
+    // customers or inmates has to go before them, or the wipe fails halfway.
+    db.delete(visitBookings).run()
+    db.delete(visitScheduleDays).run()
+    db.delete(visitScheduleTemplates).run()
+    db.delete(visitRounds).run()
+    db.delete(letterAttachments).run()
+    db.delete(letters).run()
+    db.delete(letterBatches).run()
+    db.delete(letterCreditLedger).run()
+    db.delete(letterPurchases).run()
+    db.delete(letterPackages).run()
     db.delete(deposits).run()
     db.delete(depositCards).run()
+    db.delete(payments).run()
+    db.delete(paymentChannels).run()
     db.delete(orderItems).run()
     db.delete(orders).run()
     db.delete(counters).run()
@@ -397,6 +424,12 @@ export async function seed(db: Db) {
   )
   submitLetter(letterCustomer, seededLetter.id, {}, db)
 
+  /* ── การเยี่ยม (เฟส 5) ──────────────────────────────────────────────── */
+
+  // Rounds, a Mon–Fri template, and the horizon materialized once — so the
+  // week grid and the booking screen both open on real data.
+  const visitSeed = seedVisits(db, prisonIds)
+
   /* ── per-prison settings overrides ──────────────────────────────────── */
 
   for (const p of PRISONS) {
@@ -418,7 +451,8 @@ export async function seed(db: Db) {
     depositCards: 2,
     deposits: seededDeposits.length,
     letterPackages: letterSeed.letterPackages,
-    letters: 1
+    letters: 1,
+    ...visitSeed
   }
 }
 

@@ -16,7 +16,13 @@ export const PublicSettings = z.object({
     enforceShopHours: z.boolean(),
     maxLines: z.number().int()
   }),
-  visit: z.object({ horizonWeeks: z.number().int(), bookingCutoffHours: z.number().int() }),
+  visit: z.object({
+    horizonWeeks: z.number().int(),
+    bookingCutoffHours: z.number().int(),
+    maxVisitorsPerBooking: z.number().int(),
+    autoConfirm: z.boolean(),
+    maxOpenPerInmate: z.number().int()
+  }),
   payment: z.object({ qrTtlMinutes: z.number().int() }),
   deposit: z.object({
     minSatang: z.number().int(),

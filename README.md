@@ -9,13 +9,16 @@ for the full design, and the phase notes under `docs/` for what each phase
 actually shipped: [`PHASE-0`](docs/PHASE-0.md) foundation,
 [`PHASE-0B`](docs/PHASE-0B.md) inmate import, [`PHASE-1`](docs/PHASE-1.md)
 catalog and orders, [`PHASE-2`](docs/PHASE-2.md) payments,
-[`PHASE-3`](docs/PHASE-3.md) deposits, [`PHASE-4`](docs/PHASE-4.md) e-letters.
+[`PHASE-3`](docs/PHASE-3.md) deposits, [`PHASE-4`](docs/PHASE-4.md) e-letters,
+[`PHASE-5`](docs/PHASE-5.md) visits.
 
-**Status: Phase 4 (E-letters) complete.** A relative buys a letter package on
-the same payment spine as an order or a deposit, writes a letter that spends one
-coupon from a ledger, staff batch-print it on A4 with a reply QR on every sheet,
-and the inmate's handwritten reply is scanned back in and lands in the family's
-app. Phase 5 (Visits) is not started.
+**Status: Phase 5 (Visits) complete.** Staff define rounds, fill in the weekly
+template, materialize a month of calendar with one idempotent button, and then
+edit any cell by hand — capacity, แดน, closed for a holiday — with those edits
+surviving every later run. A relative sees only the slots belonging to their
+inmate's แดน and books one against a single-row capacity update that cannot
+oversell: ten concurrent bookings on a three-seat cell produce exactly three.
+Phase 6 (News + Dashboard + Reports) is not started.
 
 ---
 

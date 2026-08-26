@@ -89,6 +89,27 @@ import type {
   UpdateLetterPackageInput,
   UpdateLetterStatusInput
 } from './letters.js'
+import type {
+  CloseVisitDatesInput,
+  CreateVisitBookingInput,
+  CreateVisitRoundInput,
+  CreateVisitScheduleDayInput,
+  GenerateVisitScheduleInput,
+  GenerateVisitScheduleResult,
+  UpdateVisitBookingStatusInput,
+  UpdateVisitRoundInput,
+  UpdateVisitScheduleDayInput,
+  UpsertVisitTemplateInput,
+  VisitAvailability,
+  VisitBookingDetail,
+  VisitBookingStatus,
+  VisitBookingSummary,
+  VisitRound,
+  VisitScheduleDay,
+  VisitScheduleGrid,
+  VisitSummaryTotals,
+  VisitTemplateCell
+} from './visits.js'
 import type { PublicSettings } from './settings.js'
 
 interface Page<T> {
@@ -379,6 +400,20 @@ export function createApiClient(opts: ClientOptions) {
         url(`/letters/${id}/attachments/${attachmentId}`)
     },
 
+    visits: {
+      rounds: (prisonId: string) => raw<{ items: VisitRound[] }>('/visits/rounds', { query: { prisonId } }),
+      /** Reads the materialized calendar only — never a weekday rule. */
+      availability: (inmateId: string, query: { from?: string; to?: string } = {}) =>
+        raw<VisitAvailability>('/visits/availability', { query: { inmateId, ...query } }),
+      book: (input: CreateVisitBookingInput) =>
+        raw<VisitBookingDetail>('/visits', { method: 'POST', body: input }),
+      list: (query: { cursor?: string; limit?: number; status?: VisitBookingStatus } = {}) =>
+        raw<Page<VisitBookingSummary>>('/visits', { query }),
+      get: (id: string) => raw<VisitBookingDetail>(`/visits/${id}`),
+      cancel: (id: string, reason?: string) =>
+        raw<VisitBookingDetail>(`/visits/${id}/cancel`, { method: 'POST', body: { reason } })
+    },
+
     admin: {
       me: () => raw<AdminMeResponse>('/admin/me'),
 
@@ -558,6 +593,63 @@ export function createApiClient(opts: ClientOptions) {
           raw<LetterPackage>('/admin/letter-packages', { method: 'POST', body: input }),
         updatePackage: (id: string, input: UpdateLetterPackageInput) =>
           raw<LetterPackage>(`/admin/letter-packages/${id}`, { method: 'PATCH', body: input })
+      },
+
+      visits: {
+        rounds: (query: { prisonId?: string; includeInactive?: boolean } = {}) =>
+          raw<{ items: VisitRound[] }>('/admin/visit-rounds', { query }),
+        createRound: (input: CreateVisitRoundInput) =>
+          raw<VisitRound>('/admin/visit-rounds', { method: 'POST', body: input }),
+        updateRound: (id: string, input: UpdateVisitRoundInput) =>
+          raw<VisitRound>(`/admin/visit-rounds/${id}`, { method: 'PATCH', body: input }),
+        deleteRound: (id: string) =>
+          raw<{ ok: true }>(`/admin/visit-rounds/${id}`, { method: 'DELETE' }),
+
+        templates: (query: { prisonId?: string } = {}) =>
+          raw<{ items: VisitTemplateCell[] }>('/admin/visit-templates', { query }),
+        setTemplate: (input: UpsertVisitTemplateInput) =>
+          raw<VisitTemplateCell>('/admin/visit-templates', { method: 'PUT', body: input }),
+        deleteTemplate: (id: string) =>
+          raw<{ ok: true }>(`/admin/visit-templates/${id}`, { method: 'DELETE' }),
+
+        /** The week grid: rounds down the left, dates across the top. */
+        schedule: (query: { prisonId?: string; from?: string; to?: string } = {}) =>
+          raw<VisitScheduleGrid>('/admin/visit-schedule', { query }),
+        createDay: (input: CreateVisitScheduleDayInput) =>
+          raw<VisitScheduleDay>('/admin/visit-schedule', { method: 'POST', body: input }),
+        updateDay: (id: string, input: UpdateVisitScheduleDayInput) =>
+          raw<VisitScheduleDay>(`/admin/visit-schedule/${id}`, { method: 'PATCH', body: input }),
+        deleteDay: (id: string) =>
+          raw<{ ok: true }>(`/admin/visit-schedule/${id}`, { method: 'DELETE' }),
+        /** Safe to press twice: existing cells are never touched. */
+        generate: (input: GenerateVisitScheduleInput = {}) =>
+          raw<GenerateVisitScheduleResult>('/admin/visit-schedule/generate', {
+            method: 'POST',
+            body: input
+          }),
+        closeDates: (input: CloseVisitDatesInput) =>
+          raw<{ affected: number }>('/admin/visit-schedule/close', { method: 'POST', body: input }),
+
+        list: (
+          query: {
+            prisonId?: string
+            zoneId?: string
+            status?: VisitBookingStatus
+            date?: string
+            from?: string
+            to?: string
+            q?: string
+            cursor?: string
+            limit?: number
+          } = {}
+        ) => raw<Page<VisitBookingSummary>>('/admin/visits', { query }),
+        get: (id: string) => raw<VisitBookingDetail>(`/admin/visits/${id}`),
+        setStatus: (id: string, input: UpdateVisitBookingStatusInput) =>
+          raw<VisitBookingDetail>(`/admin/visits/${id}/status`, { method: 'POST', body: input }),
+        checkIn: (id: string) =>
+          raw<VisitBookingDetail>(`/admin/visits/${id}/check-in`, { method: 'POST' }),
+        summary: (query: { prisonId?: string; from?: string; to?: string } = {}) =>
+          raw<VisitSummaryTotals>('/admin/visits/summary', { query })
       },
 
       paymentChannels: {

@@ -8,6 +8,7 @@
     { href: '/payments', label: 'การชำระเงิน', icon: '💳', superOnly: false },
     { href: '/deposits', label: 'การฝากเงิน', icon: '🏧', superOnly: false },
     { href: '/letters', label: 'จดหมาย', icon: '✉️', superOnly: false },
+    { href: '/visits', label: 'ตารางเยี่ยม', icon: '🗓️', superOnly: false },
     { href: '/catalog', label: 'ร้านค้าและสินค้า', icon: '🛒', superOnly: false },
     { href: '/inmates', label: 'ผู้ต้องขัง', icon: '🧑‍🦱', superOnly: false },
     { href: '/payment-channels', label: 'ช่องทางชำระเงิน', icon: '🏦', superOnly: false },
