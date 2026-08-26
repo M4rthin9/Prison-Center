@@ -1,0 +1,17 @@
+.git
+.gitignore
+.github
+.turbo
+.prettierrc
+.env.local
+.env.*.local
+node_modules
+dist
+build
+.next
+.turbo
+docs
+Plan.md
+README.md
+.DS_Store
+*.log
