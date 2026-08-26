@@ -1,0 +1,76 @@
+# syntax=docker/dockerfile:1
+#
+# All-in-one image: the Hono API plus both static front ends and the Caddy
+# edge, in a single container for Docker Desktop. Prod keeps them split
+# (docker/compose.yml); this is the one-container convenience build.
+FROM node:22-slim AS base
+ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH
+RUN corepack enable
+
+# ── API deps ────────────────────────────────────────────────────────────────
+FROM base AS api-deps
+WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ \
+  && rm -rf /var/lib/apt/lists/*
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY packages/config/package.json ./packages/config/
+COPY packages/contract/package.json ./packages/contract/
+COPY apps/api/package.json ./apps/api/
+RUN pnpm install --frozen-lockfile --filter @pc/api... --prod=false
+
+FROM api-deps AS api-build
+COPY packages ./packages
+COPY apps/api ./apps/api
+RUN pnpm --filter @pc/contract build
+
+# ── Front ends (same recipe as Dockerfile.web, once per app) ────────────────
+FROM base AS liff-build
+WORKDIR /app
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY packages ./packages
+COPY apps/liff ./apps/liff
+RUN pnpm install --frozen-lockfile --filter @pc/liff...
+# Empty base URL => same-origin API through the Caddy in this image.
+RUN echo 'PUBLIC_API_BASE_URL=' > apps/liff/.env.production
+RUN pnpm --filter @pc/contract build && pnpm --filter @pc/liff build
+
+FROM base AS admin-build
+WORKDIR /app
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY packages ./packages
+COPY apps/admin ./apps/admin
+RUN pnpm install --frozen-lockfile --filter @pc/admin...
+RUN echo 'PUBLIC_API_BASE_URL=' > apps/admin/.env.production
+RUN pnpm --filter @pc/contract build && pnpm --filter @pc/admin build
+
+# ── Runtime ─────────────────────────────────────────────────────────────────
+FROM base AS runtime
+WORKDIR /app
+ENV NODE_ENV=production
+
+# Caddy is a static Go binary; it runs fine on the glibc base.
+COPY --from=caddy:2-alpine /usr/bin/caddy /usr/bin/caddy
+
+COPY --from=api-build /app ./
+RUN chmod -R 777 /app
+COPY --from=liff-build /app/apps/liff/build /srv/liff
+COPY --from=admin-build /app/apps/admin/build /srv/admin
+COPY docker/Caddyfile.aio /etc/caddy/Caddyfile
+COPY docker/entrypoint.aio.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+RUN mkdir -p /data && chown node:node /data
+VOLUME ["/data"]
+ENV DATABASE_PATH=/data/app.db \
+    STORAGE_LOCAL_DIR=/data/uploads \
+    NOTIFIER_OUTBOX_PATH=/data/outbox.log \
+    PORT=8787 \
+    PNPM_HOME=/tmp/pnpm \
+    PNPM_SKIP_CACHE_STATUS_CHECK=true
+
+# 5173 LIFF, 5174 admin, 8787 API direct.
+EXPOSE 5173 5174 8787
+HEALTHCHECK --interval=30s --timeout=3s --start-period=20s \
+  CMD node -e "fetch('http://127.0.0.1:8787/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+
+CMD ["/usr/local/bin/entrypoint.sh"]

@@ -10,6 +10,8 @@
     { href: '/letters', label: 'จดหมาย', icon: '✉️', superOnly: false },
     { href: '/visits', label: 'ตารางเยี่ยม', icon: '🗓️', superOnly: false },
     { href: '/catalog', label: 'ร้านค้าและสินค้า', icon: '🛒', superOnly: false },
+    { href: '/news', label: 'ข่าวสาร', icon: '📰', superOnly: false },
+    { href: '/reports', label: 'รายงาน', icon: '📄', superOnly: false },
     { href: '/inmates', label: 'ผู้ต้องขัง', icon: '🧑‍🦱', superOnly: false },
     { href: '/payment-channels', label: 'ช่องทางชำระเงิน', icon: '🏦', superOnly: false },
     { href: '/customers/verify', label: 'คำขอผูกบัญชี', icon: '✅', superOnly: false },

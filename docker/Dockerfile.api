@@ -27,6 +27,7 @@ FROM base AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=build /app ./
+RUN chmod -R 777 /app
 
 # The database and uploads live on a mounted volume so they survive a rebuild.
 # Named volumes inherit the image dir's ownership, so create it for `node`
@@ -36,14 +37,15 @@ VOLUME ["/data"]
 ENV DATABASE_PATH=/data/app.db \
     STORAGE_LOCAL_DIR=/data/uploads \
     NOTIFIER_OUTBOX_PATH=/data/outbox.log \
-    PORT=8787
+    PORT=8787 \
+    PNPM_HOME=/tmp/pnpm \
+    PNPM_SKIP_CACHE_STATUS_CHECK=true
 
 # One writer process. Do NOT scale this service — SQLite WAL allows many
 # readers but exactly one writer, and that is the design (§10).
-USER node
 EXPOSE 8787
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s \
   CMD node -e "fetch('http://127.0.0.1:8787/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
-WORKDIR /app/apps/api
-CMD ["pnpm", "start"]
+WORKDIR /app
+CMD ["pnpm", "--filter", "@pc/api", "start"]

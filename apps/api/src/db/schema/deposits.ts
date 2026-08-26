@@ -93,6 +93,8 @@ export const deposits = sqliteTable(
     uniqueIndex('uq_deposits_deposit_no').on(t.depositNo),
     // The review queue reads exactly this (§5 index list).
     index('idx_deposits_review').on(t.prisonId, t.status, t.depositedAt),
+    /** Department-wide report range scan (§7). */
+    index('idx_deposits_created').on(t.createdAt),
     index('idx_deposits_customer').on(t.customerId, t.createdAt),
     index('idx_deposits_inmate').on(t.inmateId, t.createdAt),
     index('idx_deposits_payment').on(t.paymentId)

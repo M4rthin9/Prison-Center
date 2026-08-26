@@ -1,0 +1,38 @@
+# All-in-one edge: both front ends served from the same container as the API,
+# which listens on loopback:8787. Same-origin /api and /files so the httpOnly
+# refresh cookie behaves exactly as in production.
+{
+	admin off
+}
+
+(app) {
+	encode zstd gzip
+
+	handle /api/* {
+		reverse_proxy 127.0.0.1:8787
+	}
+
+	handle /files/* {
+		reverse_proxy 127.0.0.1:8787
+	}
+
+	handle {
+		try_files {path} /index.html
+		file_server
+	}
+
+	header {
+		X-Content-Type-Options nosniff
+		-Server
+	}
+}
+
+:5173 {
+	root * /srv/liff
+	import app
+}
+
+:5174 {
+	root * /srv/admin
+	import app
+}

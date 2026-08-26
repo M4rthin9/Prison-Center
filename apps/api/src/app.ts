@@ -29,6 +29,10 @@ import {
 } from './modules/letters/routes.js'
 import { createAdminLetterRoutes } from './modules/letters/admin-routes.js'
 import { createVisitRoutes } from './modules/visits/routes.js'
+import { createNewsRoutes } from './modules/news/routes.js'
+import { createAdminNewsRoutes } from './modules/news/admin-routes.js'
+import { createAdminDashboardRoutes } from './modules/dashboard/routes.js'
+import { createAdminReportRoutes } from './modules/reports/admin-routes.js'
 import { createAdminVisitRoutes } from './modules/visits/admin-routes.js'
 import { createAdminRoutes } from './modules/admin/routes.js'
 import { createAdminSettingsRoutes, createPublicSettingsRoutes } from './modules/settings/routes.js'
@@ -88,6 +92,8 @@ export function createApp() {
   api.route('/letter-purchases', createLetterPurchaseRoutes())
   api.route('/letters', createLetterRoutes())
   api.route('/visits', createVisitRoutes())
+  // ข่าวสาร is public: no session, the same feed the admin writes.
+  api.route('/news', createNewsRoutes())
   api.route('/settings', createPublicSettingsRoutes())
 
   /* staff realm — same session shape, separate cookie, separate route tree */
@@ -100,6 +106,7 @@ export function createApp() {
       allowRegister: false
     })
   )
+  api.route('/admin', createAdminDashboardRoutes())
   api.route('/admin/settings', createAdminSettingsRoutes())
   api.route('/admin', createAdminCatalogRoutes())
   api.route('/admin', createAdminOrderRoutes())
@@ -108,6 +115,8 @@ export function createApp() {
   api.route('/admin', createAdminDepositRoutes())
   api.route('/admin', createAdminLetterRoutes())
   api.route('/admin', createAdminVisitRoutes())
+  api.route('/admin', createAdminNewsRoutes())
+  api.route('/admin', createAdminReportRoutes())
   api.route('/admin', createAdminRoutes())
 
   app.route(API_PREFIX, api)

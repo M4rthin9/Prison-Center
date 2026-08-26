@@ -155,7 +155,8 @@ describe('jobs queue', () => {
     const { jobs } = await import('../src/db/schema/index.js')
     const { eq } = await import('drizzle-orm')
 
-    const id = enqueue('report.generate', { kind: 'sales' }, { maxAttempts: 1, db: db() })
+    // `pdpa.retention` is declared as a job kind but lands in Phase 7.
+    const id = enqueue('pdpa.retention', {}, { maxAttempts: 1, db: db() })
     await drainJobs()
 
     const row = db().select().from(jobs).where(eq(jobs.id, id)).get()

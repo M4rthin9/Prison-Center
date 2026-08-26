@@ -209,6 +209,8 @@ export const letters = sqliteTable(
     index('idx_letters_sender').on(t.senderCustomerId, t.createdAt),
     index('idx_letters_recipient').on(t.recipientCustomerId, t.createdAt),
     index('idx_letters_inmate').on(t.recipientInmateId, t.createdAt),
+    /** Department-wide report range scan (§7). */
+    index('idx_letters_created').on(t.createdAt),
     index('idx_letters_batch').on(t.batchId),
     index('idx_letters_reply_to').on(t.replyToLetterId)
   ]

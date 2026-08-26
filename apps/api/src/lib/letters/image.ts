@@ -1,65 +1,16 @@
-import sharp from 'sharp'
-import { badRequest } from '../errors.js'
 import { decodeQrIn, type Attempt } from '../payments/slip.js'
 
 /**
- * Photos attached to a letter, and photographs of a scanned reply sheet. Same
- * rule as a slip: decode and re-encode, because that is what strips the EXIF
- * block — a family photo's EXIF carries the coordinates of the house it was
- * taken in, and this one is going to be printed and handed to a stranger.
+ * The generic pipeline lives in `lib/image.ts` — letters were simply the first
+ * caller. Re-exported under the old name so the letter module reads the way it
+ * did before news covers needed the same EXIF stripping.
  */
-
-export const MAX_ATTACHMENT_BYTES = 8 * 1024 * 1024
-export const MAX_SCAN_BYTES = 16 * 1024 * 1024
-const ACCEPTED = new Set(['image/jpeg', 'image/png', 'image/webp'])
-
-export interface NormalizedImage {
-  buffer: Buffer
-  contentType: 'image/jpeg'
-  width: number
-  height: number
-  bytes: number
-}
-
-export async function normalizeLetterImage(
-  input: Buffer,
-  opts: { declaredType?: string; maxEdge?: number; maxBytes?: number; label?: string } = {}
-): Promise<NormalizedImage> {
-  const label = opts.label ?? 'ไฟล์ภาพ'
-  const maxBytes = opts.maxBytes ?? MAX_ATTACHMENT_BYTES
-  if (input.byteLength === 0) throw badRequest(`${label}ว่างเปล่า`)
-  if (input.byteLength > maxBytes) {
-    throw badRequest(`${label}ใหญ่เกิน ${Math.round(maxBytes / 1024 / 1024)} MB`)
-  }
-  if (opts.declaredType && !ACCEPTED.has(opts.declaredType)) {
-    throw badRequest('รองรับเฉพาะไฟล์ภาพ JPEG, PNG หรือ WebP')
-  }
-
-  let meta: Awaited<ReturnType<ReturnType<typeof sharp>['metadata']>>
-  try {
-    meta = await sharp(input, { failOn: 'error' }).metadata()
-  } catch {
-    throw badRequest(`อ่าน${label}ไม่ได้ — กรุณาถ่ายใหม่`)
-  }
-  if (!meta.format || !ACCEPTED.has(`image/${meta.format}`)) {
-    throw badRequest('รองรับเฉพาะไฟล์ภาพ JPEG, PNG หรือ WebP')
-  }
-
-  const edge = opts.maxEdge ?? 1600
-  const out = await sharp(input)
-    .rotate()
-    .resize({ width: edge, height: edge, fit: 'inside', withoutEnlargement: true })
-    .jpeg({ quality: 82, mozjpeg: true })
-    .toBuffer({ resolveWithObject: true })
-
-  return {
-    buffer: out.data,
-    contentType: 'image/jpeg',
-    width: out.info.width,
-    height: out.info.height,
-    bytes: out.data.byteLength
-  }
-}
+export {
+  MAX_ATTACHMENT_BYTES,
+  MAX_SCAN_BYTES,
+  normalizeImage as normalizeLetterImage,
+  type NormalizedImage
+} from '../image.js'
 
 /* ── the reply-form QR (p.6) ───────────────────────────────────────────── */
 

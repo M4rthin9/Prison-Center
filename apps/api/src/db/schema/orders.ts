@@ -61,7 +61,11 @@ export const orders = sqliteTable(
     index('idx_orders_prison_date').on(t.prisonId, t.orderedAt),
     index('idx_orders_paystatus').on(t.paymentStatus, t.orderedAt),
     index('idx_orders_fulfillment').on(t.prisonId, t.fulfillmentStatus, t.orderedAt),
-    index('idx_orders_customer').on(t.customerId, t.orderedAt)
+    index('idx_orders_customer').on(t.customerId, t.orderedAt),
+    // §7 reports run department-wide, so `prison_id` is often unbound and the
+    // composite indexes above cannot be used. EXPLAIN QUERY PLAN turned this
+    // one from SCAN orders into a range search.
+    index('idx_orders_ordered_at').on(t.orderedAt)
   ]
 )
 

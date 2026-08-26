@@ -146,7 +146,9 @@ export const payments = sqliteTable(
     index('idx_payments_customer').on(t.customerId, t.createdAt),
     // The salt allocator scans exactly this: live payments on one channel.
     index('idx_payments_channel_live').on(t.channelId, t.status, t.chargeSatang),
-    index('idx_payments_expiry').on(t.status, t.expiresAt)
+    index('idx_payments_expiry').on(t.status, t.expiresAt),
+    /** Department-wide report range scan (§7). */
+    index('idx_payments_created').on(t.createdAt)
   ]
 )
 

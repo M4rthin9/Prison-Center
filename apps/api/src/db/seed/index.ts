@@ -10,6 +10,7 @@ import {
   letterPackages,
   letterPurchases,
   letters,
+  news,
   paymentChannels,
   payments,
   depositCards,
@@ -46,6 +47,7 @@ import {
   submitLetter
 } from '../../modules/letters/service.js'
 import { onLetterPurchasePaymentVerified } from '../../modules/letters/status.js'
+import { createNews } from '../../modules/news/service.js'
 import { seedCatalog } from './catalog.js'
 import { seedLetterPackages } from './letters.js'
 import { seedPaymentChannels } from './payments.js'
@@ -138,6 +140,7 @@ export async function seed(db: Db) {
     db.delete(visitScheduleDays).run()
     db.delete(visitScheduleTemplates).run()
     db.delete(visitRounds).run()
+    db.delete(news).run()
     db.delete(letterAttachments).run()
     db.delete(letters).run()
     db.delete(letterBatches).run()
@@ -430,6 +433,63 @@ export async function seed(db: Db) {
   // week grid and the booking screen both open on real data.
   const visitSeed = seedVisits(db, prisonIds)
 
+  /* ── ข่าวสาร (เฟส 6) ─────────────────────────────────────────────────── */
+
+  // One department-wide notice plus one per prison, so the customer feed and
+  // the admin list are both non-empty on a fresh install.
+  const klpAdminId = db
+    .select({ id: staff.id })
+    .from(staff)
+    .where(eq(staff.username, 'klp.admin'))
+    .get()!.id
+
+  createNews(
+    superAdminId,
+    {
+      title: 'แนวปฏิบัติการเยี่ยมญาติ ปีงบประมาณ 2569',
+      bodyHtml:
+        '<p>กรมราชทัณฑ์ปรับแนวปฏิบัติการเยี่ยมญาติให้จองล่วงหน้าผ่านระบบเท่านั้น ' +
+        'เพื่อลดความแออัดหน้าเรือนจำ</p>' +
+        '<ul><li>จองล่วงหน้าอย่างน้อย 1 วัน</li>' +
+        '<li>แสดง QR การจองที่จุดคัดกรอง</li>' +
+        '<li>ผู้เยี่ยมไม่เกิน 3 คนต่อการจอง</li></ul>',
+      prisonId: null,
+      status: 'published',
+      isPinned: true
+    },
+    {},
+    db
+  )
+
+  createNews(
+    klpAdminId,
+    {
+      title: 'เปิดรับสั่งซื้อสินค้าร้านฝึกอาชีพรอบเดือนนี้',
+      excerpt: 'สั่งซื้อได้ถึงสิ้นเดือน จัดส่งเข้าแดนภายใน 3 วันทำการ',
+      bodyHtml:
+        '<p>ร้านค้าฝึกอาชีพเปิดรับคำสั่งซื้อประจำเดือนแล้ว ' +
+        'สินค้าที่ชำระเงินก่อนเวลาปิดรับจะถูกจัดส่งเข้าแดนภายใน 3 วันทำการ</p>',
+      prisonId: prisonIds['KLP']!,
+      status: 'published',
+      isPinned: false
+    },
+    {},
+    db
+  )
+
+  createNews(
+    superAdminId,
+    {
+      title: 'ปรับปรุงระบบฝากเงินคืนวันเสาร์',
+      bodyHtml: '<p>ระบบฝากเงินจะปิดปรับปรุงคืนวันเสาร์ เวลา 23:00 ถึง 01:00</p>',
+      prisonId: prisonIds['BKW']!,
+      status: 'draft',
+      isPinned: false
+    },
+    {},
+    db
+  )
+
   /* ── per-prison settings overrides ──────────────────────────────────── */
 
   for (const p of PRISONS) {
@@ -452,6 +512,7 @@ export async function seed(db: Db) {
     deposits: seededDeposits.length,
     letterPackages: letterSeed.letterPackages,
     letters: 1,
+    news: 3,
     ...visitSeed
   }
 }

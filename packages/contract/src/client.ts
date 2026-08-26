@@ -110,6 +110,15 @@ import type {
   VisitSummaryTotals,
   VisitTemplateCell
 } from './visits.js'
+import type {
+  CreateNewsInput,
+  NewsDetail,
+  NewsStatus,
+  NewsSummary,
+  UpdateNewsInput
+} from './news.js'
+import type { DashboardPeriod, DashboardSummary } from './dashboard.js'
+import type { ReportJob, ReportKind, ReportRequestInput } from './reports.js'
 import type { PublicSettings } from './settings.js'
 
 interface Page<T> {
@@ -417,6 +426,11 @@ export function createApiClient(opts: ClientOptions) {
     admin: {
       me: () => raw<AdminMeResponse>('/admin/me'),
 
+      /** p.11 — one call feeds all four tiles and the period chart. */
+      dashboard: (
+        query: { prisonId?: string; period?: DashboardPeriod; from?: string; to?: string } = {}
+      ) => raw<DashboardSummary>('/admin/dashboard/summary', { query }),
+
       shops: {
         list: (query: { prisonId?: string; includeInactive?: boolean } = {}) =>
           raw<{ items: ShopSummary[] }>('/admin/shops', { query }),
@@ -684,7 +698,49 @@ export function createApiClient(opts: ClientOptions) {
         refund: (id: string, input: RefundPaymentInput) =>
           raw<PaymentDetail>(`/admin/payments/${id}/refund`, { method: 'POST', body: input }),
         slipUrl: (id: string) => url(`/admin/payments/${id}/slip`)
+      },
+
+      news: {
+        list: (
+          query: {
+            prisonId?: string
+            status?: NewsStatus
+            q?: string
+            cursor?: string
+            limit?: number
+          } = {}
+        ) => raw<Page<NewsSummary>>('/admin/news', { query }),
+        get: (id: string) => raw<NewsDetail>(`/admin/news/${id}`),
+        create: (input: CreateNewsInput) =>
+          raw<NewsDetail>('/admin/news', { method: 'POST', body: input }),
+        update: (id: string, input: UpdateNewsInput) =>
+          raw<NewsDetail>(`/admin/news/${id}`, { method: 'PATCH', body: input }),
+        remove: (id: string) => raw<{ ok: true }>(`/admin/news/${id}`, { method: 'DELETE' }),
+        setCover(id: string, file: File | Blob, filename = 'cover.jpg') {
+          const form = new FormData()
+          form.append('file', file, filename)
+          return raw<NewsDetail>(`/admin/news/${id}/cover`, { method: 'POST', form })
+        },
+        removeCover: (id: string) =>
+          raw<NewsDetail>(`/admin/news/${id}/cover`, { method: 'DELETE' })
+      },
+
+      reports: {
+        /** Queues the job and returns immediately — XLSX is never inline. */
+        run: (kind: ReportKind, input: ReportRequestInput) =>
+          raw<ReportJob>(`/admin/reports/${kind}`, { method: 'POST', body: input }),
+        list: (query: { kind?: ReportKind; limit?: number } = {}) =>
+          raw<{ items: ReportJob[] }>('/admin/reports', { query }),
+        get: (jobId: string) => raw<ReportJob>(`/admin/reports/${jobId}`),
+        downloadUrl: (jobId: string) => url(`/admin/reports/${jobId}/download`)
       }
+    },
+
+    news: {
+      /** Published only. No session needed — the feed is public by design. */
+      list: (query: { prisonId?: string; cursor?: string; limit?: number } = {}) =>
+        raw<Page<NewsSummary>>('/news', { query }),
+      get: (slug: string) => raw<NewsDetail>(`/news/${encodeURIComponent(slug)}`)
     },
 
     prisons: {

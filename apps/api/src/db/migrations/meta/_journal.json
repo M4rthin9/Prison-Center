@@ -50,6 +50,20 @@
       "when": 1787703936969,
       "tag": "0006_phase5_visits",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1787723158373,
+      "tag": "0007_phase6_news",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1787725356482,
+      "tag": "0008_phase6_report_indexes",
+      "breakpoints": true
     }
   ]
 }

@@ -169,7 +169,9 @@ export const visitBookings = sqliteTable(
     index('idx_visit_bookings_gate').on(t.prisonId, t.visitDate, t.status),
     index('idx_visit_bookings_customer').on(t.customerId, t.visitDate),
     index('idx_visit_bookings_inmate').on(t.inmateId, t.visitDate),
-    index('idx_visit_bookings_reminder').on(t.status, t.startsAt, t.remindedAt)
+    index('idx_visit_bookings_reminder').on(t.status, t.startsAt, t.remindedAt),
+    /** Department-wide report range scan (§7). */
+    index('idx_visit_bookings_date').on(t.visitDate)
   ]
 )
 

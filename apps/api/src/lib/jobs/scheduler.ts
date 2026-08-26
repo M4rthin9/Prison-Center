@@ -4,6 +4,7 @@ import { customerRealm, staffRealm } from '../auth/realms.js'
 import { expireDuePayments } from '../../modules/payments/service.js'
 import { markBatchFailed, renderBatch } from '../../modules/letters/service.js'
 import { materializeAll, sendVisitReminders } from '../../modules/visits/service.js'
+import { generateReport } from '../../modules/reports/service.js'
 import { MINUTE, now } from '../time.js'
 import {
   claimNext,
@@ -46,6 +47,11 @@ export const handlers: Partial<Record<JobKind, JobHandler>> = {
   'visit.schedule.materialize': () => materializeAll(),
 
   'visit.reminder': () => sendVisitReminders(),
+
+  // §7: seven XLSX reports, all off the request thread. The job row *is* the
+  // record — its payload holds the filters and its result holds the file key,
+  // so a report can always be traced back to what was asked for.
+  'report.generate': (job) => generateReport(job.id),
 
   'session.purge': () => {
     const at = now()

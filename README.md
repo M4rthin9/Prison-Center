@@ -10,15 +10,17 @@ actually shipped: [`PHASE-0`](docs/PHASE-0.md) foundation,
 [`PHASE-0B`](docs/PHASE-0B.md) inmate import, [`PHASE-1`](docs/PHASE-1.md)
 catalog and orders, [`PHASE-2`](docs/PHASE-2.md) payments,
 [`PHASE-3`](docs/PHASE-3.md) deposits, [`PHASE-4`](docs/PHASE-4.md) e-letters,
-[`PHASE-5`](docs/PHASE-5.md) visits.
+[`PHASE-5`](docs/PHASE-5.md) visits,
+[`PHASE-6`](docs/PHASE-6.md) news, dashboard and reports.
 
-**Status: Phase 5 (Visits) complete.** Staff define rounds, fill in the weekly
-template, materialize a month of calendar with one idempotent button, and then
-edit any cell by hand — capacity, แดน, closed for a holiday — with those edits
-surviving every later run. A relative sees only the slots belonging to their
-inmate's แดน and books one against a single-row capacity update that cannot
-oversell: ten concurrent bookings on a three-seat cell produce exactly three.
-Phase 6 (News + Dashboard + Reports) is not started.
+**Status: Phase 6 (News + Dashboard + Reports) complete.** All seven p.12
+reports generate as real `.xlsx` files through the job queue — Thai headers, the
+filters that produced them, a generated-at stamp and bold totals — and download
+through the admin session. The four p.11 dashboard tiles count from the business
+tables at read time over a Bangkok-local period selector, with a daily chart and
+the work queues waiting on staff. Staff write ข่าวสาร in the dashboard, sanitized
+on write; relatives read it in the customer app without a session.
+Phase 7 (LINE + hardening) is not started.
 
 ---
 
@@ -115,7 +117,8 @@ Inside `apps/api/src`:
 db/          schema/ · migrations/ · seed/ · client.ts (pragmas) · migrate.ts · reset.ts
 lib/         auth/ (providers, realms) · jobs/ · notify/ · storage/ · password.ts · hook.ts
 middleware/  prison-scope.ts · error.ts · request-id.ts
-modules/     auth · me · prisons · catalog · orders · admin · settings — one per feature
+modules/     auth · me · prisons · catalog · orders · payments · deposits · letters ·
+             visits · news · dashboard · reports · inmates · admin · settings
 app.ts       route tree, CORS, OpenAPI document
 env.ts       parsed + validated environment
 ```
