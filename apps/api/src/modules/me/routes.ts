@@ -8,6 +8,7 @@ import { conflict, notFound, unauthorized } from '../../lib/errors.js'
 import { bearerAuth, commonErrors, jsonBody, jsonRes } from '../../lib/openapi.js'
 import { defaultHook } from '../../lib/hook.js'
 import { blockUntilPasswordChanged, requireCustomer } from '../../middleware/auth.js'
+import { closeAccount } from '../pdpa/service.js'
 import { requestContext } from '../../lib/auth/session.js'
 import type { AppEnv } from '../../types.js'
 
@@ -43,6 +44,8 @@ export function buildMe(customerId: string) {
     phone: me.phone,
     lineIdText: me.lineIdText,
     lineLinked: me.lineUserId !== null,
+    lineDisplayName: me.lineDisplayName,
+    linePictureUrl: me.linePictureUrl,
     mustChangePassword: me.mustChangePassword,
     inmates: links,
     // Letter credits are a Phase 4 ledger; the shape exists from day one so the
@@ -176,6 +179,37 @@ export function createMeRoutes() {
         userAgent: ctx.userAgent
       })
       return c.json(buildMe(me.id), 201)
+    }
+  )
+
+  app.openapi(
+    createRoute({
+      method: 'post',
+      path: '/close-account',
+      tags: ['me'],
+      summary: 'ขอปิดบัญชีและลบข้อมูลส่วนบุคคล (PDPA)',
+      description:
+        'ปิดบัญชีและยกเลิกทุกเซสชันทันที ข้อมูลส่วนบุคคลจะถูกลบเมื่อครบระยะเวลาที่กำหนด ' +
+        'ส่วนประวัติการเงินจะคงไว้โดยไม่ระบุตัวตน',
+      security: bearerAuth,
+      responses: { 204: { description: 'รับคำขอปิดบัญชีแล้ว' }, ...commonErrors }
+    }),
+    (c) => {
+      const me = c.get('customer')
+      if (!me) throw unauthorized()
+      const at = closeAccount(me.id, db())
+      const ctx = requestContext(c)
+      writeAudit({
+        actorType: 'customer',
+        actorId: me.id,
+        action: 'me.close_account',
+        entity: 'customer',
+        entityId: me.id,
+        after: { closedAt: at },
+        ip: ctx.ip,
+        userAgent: ctx.userAgent
+      })
+      return c.body(null, 204)
     }
   )
 

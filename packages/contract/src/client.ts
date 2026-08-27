@@ -2,8 +2,13 @@ import { ApiError, type ErrorCode } from './common.js'
 import type {
   AdminMeResponse,
   ChangePasswordInput,
+  LineLinkState,
+  LineTokenInput,
   LoginInput,
   MeResponse,
+  PasswordResetChallenge,
+  PasswordResetRequestInput,
+  PasswordResetVerifyInput,
   RegisterInput,
   SessionResponse,
   UpdateMeInput
@@ -118,6 +123,7 @@ import type {
   UpdateNewsInput
 } from './news.js'
 import type { DashboardPeriod, DashboardSummary } from './dashboard.js'
+import type { RetentionReport, RunRetentionInput } from './pdpa.js'
 import type { ReportJob, ReportKind, ReportRequestInput } from './reports.js'
 import type { PublicSettings } from './settings.js'
 
@@ -296,12 +302,38 @@ export function createApiClient(opts: ClientOptions) {
         } finally {
           accessToken = null
         }
-      }
+      },
+
+      /* LINE + self-service reset — customer realm only. */
+
+      lineLogin: (input: LineTokenInput) =>
+        raw<SessionResponse>('/auth/line/login', {
+          method: 'POST',
+          body: input,
+          retryOn401: false
+        }).then(adopt),
+      linkLine: (input: LineTokenInput) =>
+        raw<LineLinkState>('/auth/line/link', { method: 'POST', body: input }),
+      unlinkLine: () => raw<LineLinkState>('/auth/line/link', { method: 'DELETE' }),
+      requestPasswordReset: (input: PasswordResetRequestInput) =>
+        raw<PasswordResetChallenge>('/auth/password-reset/request', {
+          method: 'POST',
+          body: input,
+          retryOn401: false
+        }),
+      verifyPasswordReset: (input: PasswordResetVerifyInput) =>
+        raw<void>('/auth/password-reset/verify', {
+          method: 'POST',
+          body: input,
+          retryOn401: false
+        })
     },
 
     me: {
       get: () => raw<MeResponse>('/me'),
-      update: (input: UpdateMeInput) => raw<MeResponse>('/me', { method: 'PATCH', body: input })
+      update: (input: UpdateMeInput) => raw<MeResponse>('/me', { method: 'PATCH', body: input }),
+      /** PDPA deletion request. Ends the session; the scrub happens later. */
+      closeAccount: () => raw<void>('/me/close-account', { method: 'POST' })
     },
 
     catalog: {
@@ -733,6 +765,13 @@ export function createApiClient(opts: ClientOptions) {
           raw<{ items: ReportJob[] }>('/admin/reports', { query }),
         get: (jobId: string) => raw<ReportJob>(`/admin/reports/${jobId}`),
         downloadUrl: (jobId: string) => url(`/admin/reports/${jobId}/download`)
+      },
+
+      pdpa: {
+        /** Reports what the retention job would remove. Never deletes. */
+        preview: () => raw<RetentionReport>('/admin/pdpa/retention/preview'),
+        run: (input: RunRetentionInput = {}) =>
+          raw<RetentionReport>('/admin/pdpa/retention/run', { method: 'POST', body: input })
       }
     },
 

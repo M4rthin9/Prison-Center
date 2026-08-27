@@ -244,10 +244,28 @@ export const REGISTRY = {
     label: 'ลบบัญชีที่ปิดแล้ว (วัน) — แล้วทำให้ไม่ระบุตัวตน'
   }),
 
+  // Off until the retention windows above have departmental sign-off. The job
+  // runs in dry-run first: it reports what it *would* delete and deletes
+  // nothing, which is the only responsible way to switch a purge on.
+  'pdpa.retention.enabled': def(z.boolean(), false, {
+    label: 'เปิดใช้งานงานลบข้อมูลตามระยะเวลา (PDPA)'
+  }),
+  'pdpa.retention.dry_run': def(z.boolean(), true, {
+    label: 'โหมดทดสอบ — รายงานอย่างเดียว ไม่ลบจริง'
+  }),
+
   'line.rich_menu_id': def(z.string().nullable(), null, { label: 'LINE Rich Menu ID' }),
+  'line.liff_id': def(z.string().nullable(), null, {
+    exposed: true,
+    label: 'LIFF ID (แอปในไลน์)'
+  }),
   'features.line_login': def(z.boolean(), false, {
     exposed: true,
     label: 'เปิดใช้งานเข้าสู่ระบบด้วย LINE'
+  }),
+  'features.self_service_reset': def(z.boolean(), false, {
+    exposed: true,
+    label: 'เปิดให้ตั้งรหัสผ่านใหม่ด้วยตนเอง (OTP)'
   })
 } as const satisfies Record<string, SettingDef<unknown>>
 

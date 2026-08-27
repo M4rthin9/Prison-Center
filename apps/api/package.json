@@ -13,7 +13,9 @@
     "db:migrate": "node --env-file-if-exists=.env --import tsx src/db/migrate.ts",
     "db:seed": "node --env-file-if-exists=.env --import tsx src/db/seed/index.ts",
     "db:reset": "node --env-file-if-exists=.env --import tsx src/db/reset.ts",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "loadtest": "node --env-file-if-exists=.env --import tsx scripts/loadtest.ts",
+    "rich-menu": "node --env-file-if-exists=.env --import tsx scripts/line-rich-menu.ts"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.1",

@@ -5,6 +5,10 @@ import { expireDuePayments } from '../../modules/payments/service.js'
 import { markBatchFailed, renderBatch } from '../../modules/letters/service.js'
 import { materializeAll, sendVisitReminders } from '../../modules/visits/service.js'
 import { generateReport } from '../../modules/reports/service.js'
+import { runRetention } from '../../modules/pdpa/service.js'
+import { LineApiError, pushMessage, textMessage } from '../line/client.js'
+import { markPushDelivered, markPushFailed } from '../notify/delivery.js'
+import { BANGKOK_OFFSET_MS } from '../time.js'
 import { MINUTE, now } from '../time.js'
 import {
   claimNext,
@@ -52,6 +56,35 @@ export const handlers: Partial<Record<JobKind, JobHandler>> = {
   // record — its payload holds the filters and its result holds the file key,
   // so a report can always be traced back to what was asked for.
   'report.generate': (job) => generateReport(job.id),
+
+  // LINE push never happens on a request thread: the in-app notification is
+  // already written, so this job only decides whether the phone buzzes.
+  'line.push': async (job) => {
+    const to = String(job.payload.to ?? '')
+    const notificationId = job.payload.notificationId as string | null
+    const text = `${String(job.payload.title ?? '')}
+${String(job.payload.body ?? '')}`.trim()
+    if (!to) return { skipped: 'no line_user_id' }
+
+    try {
+      // The job id is the retry key: LINE dedupes on it for 24h, so a retry
+      // after a timeout that actually delivered does not double-send.
+      await pushMessage(to, [textMessage(text)], job.id)
+      markPushDelivered(notificationId)
+      return { pushed: true }
+    } catch (err) {
+      const permanent = err instanceof LineApiError && !err.retryable
+      markPushFailed(notificationId, err instanceof Error ? err.message : String(err))
+      // A blocked bot or a stale user id will never succeed — retrying it just
+      // burns the queue. Anything transient goes back for the usual backoff.
+      if (permanent) return { pushed: false, error: String(err) }
+      throw err
+    }
+  },
+
+  // §12 decision #8. Off by default and dry-run after that; the handler is
+  // registered from day one so enabling it is a settings change, not a deploy.
+  'pdpa.retention': () => runRetention(),
 
   'session.purge': () => {
     const at = now()
@@ -124,6 +157,9 @@ export function startScheduler(intervalMs = 5_000): Scheduler {
       enqueue('session.purge')
       enqueue('visit.schedule.materialize')
       enqueue('visit.reminder')
+      // Once a day, at 03:00 Bangkok — the housekeeping timer fires hourly, so
+      // matching the hour is enough to keep this to one run.
+      if (new Date(now() + BANGKOK_OFFSET_MS).getUTCHours() === 3) enqueue('pdpa.retention')
     } catch (err) {
       console.error('[jobs] housekeeping failed', err)
     }

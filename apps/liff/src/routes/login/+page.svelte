@@ -2,13 +2,52 @@
   import { goto } from '$app/navigation'
   import { page } from '$app/state'
   import { Alert, Button, Field } from '@pc/ui'
-  import { session, toFormError } from '$lib/session.svelte.js'
+  import { api, session, toFormError } from '$lib/session.svelte.js'
+  import { bootLiff, liff } from '$lib/liff.svelte.js'
+  import { ApiClientError } from '@pc/contract/client'
 
   let username = $state('')
   let password = $state('')
   let loading = $state(false)
+  let lineLoading = $state(false)
   let message = $state('')
   let fields = $state<Record<string, string[]>>({})
+  let lineEnabled = $state(false)
+  let resetEnabled = $state(false)
+
+  // Public settings decide whether LINE exists at all; the SDK is only fetched
+  // when a LIFF id is configured, so this is a no-op on a plain deployment.
+  $effect(() => {
+    api.settings
+      .public()
+      .then((s) => {
+        lineEnabled = s.features.lineLogin
+        resetEnabled = s.features.selfServiceReset
+        if (s.features.lineLogin) void bootLiff()
+      })
+      .catch(() => {})
+  })
+
+  async function signInWithLine() {
+    lineLoading = true
+    message = ''
+    try {
+      const idToken = await liff.idToken()
+      // null means the SDK just navigated to the LINE consent screen; the page
+      // will come back here and run this again.
+      if (!idToken) return
+      const res = await session.signInWithLine(idToken)
+      const next = page.url.searchParams.get('next')
+      await goto(res.mustChangePassword ? '/change-password' : (next ?? '/'), { replaceState: true })
+    } catch (err) {
+      message =
+        err instanceof ApiClientError && err.code === 'LINE_NOT_LINKED'
+          ? 'บัญชี LINE นี้ยังไม่ได้เชื่อมกับบัญชีในระบบ กรุณาเข้าสู่ระบบด้วยเบอร์มือถือ แล้วเชื่อมบัญชีในหน้า “บัญชีของฉัน”'
+          : toFormError(err).message
+    } finally {
+      lineLoading = false
+    }
+  }
 
   async function submit(event: SubmitEvent) {
     event.preventDefault()
@@ -70,22 +109,29 @@
     <Button type="submit" full size="lg" {loading}>เข้าสู่ระบบ</Button>
   </form>
 
-  <!-- Phase 7. Rendered disabled from day one so the layout does not shift when
-       LINE login lands. -->
   <button
     type="button"
-    disabled
+    disabled={!lineEnabled || !liff.available || lineLoading}
+    onclick={signInWithLine}
     class="mt-3 flex h-13 w-full items-center justify-center gap-2 rounded-xl border border-line
-           bg-white font-medium text-muted"
-    title="เปิดให้บริการเร็ว ๆ นี้"
+           font-medium disabled:bg-white disabled:text-muted
+           {lineEnabled && liff.available ? 'bg-[#06C755] text-white' : ''}"
+    title={lineEnabled && liff.available ? 'เข้าสู่ระบบด้วย LINE' : 'ยังไม่เปิดให้บริการ'}
   >
-    <span aria-hidden="true">💬</span> เข้าสู่ระบบด้วย LINE
+    <span aria-hidden="true">💬</span>
+    {lineLoading ? 'กำลังเชื่อมต่อ LINE…' : 'เข้าสู่ระบบด้วย LINE'}
   </button>
 
   <p class="mt-6 text-center text-sm text-muted">
     ยังไม่มีบัญชี? <a class="font-medium text-brand-700" href="/register">สมัครสมาชิก</a>
   </p>
-  <p class="mt-2 text-center text-xs text-muted">
-    ลืมรหัสผ่าน? ติดต่อเจ้าหน้าที่เรือนจำเพื่อขอรหัสผ่านชั่วคราว
-  </p>
+  {#if resetEnabled}
+    <p class="mt-2 text-center text-sm">
+      <a class="text-brand-700" href="/forgot-password">ลืมรหัสผ่าน?</a>
+    </p>
+  {:else}
+    <p class="mt-2 text-center text-xs text-muted">
+      ลืมรหัสผ่าน? ติดต่อเจ้าหน้าที่เรือนจำเพื่อขอรหัสผ่านชั่วคราว
+    </p>
+  {/if}
 </main>

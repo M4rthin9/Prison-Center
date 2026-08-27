@@ -70,6 +70,31 @@ class Session {
     await this.load()
   }
 
+  /**
+   * LINE login. The ID token is proof of a LINE identity, not of an account —
+   * an unlinked one comes back as LINE_NOT_LINKED, which the caller turns into
+   * "sign in with your phone once, then link".
+   */
+  async signInWithLine(idToken: string) {
+    const res = await api.auth.lineLogin({ idToken })
+    if (res.mustChangePassword) {
+      this.me = { mustChangePassword: true } as MeResponse
+      return res
+    }
+    await this.load()
+    return res
+  }
+
+  async linkLine(idToken: string) {
+    await api.auth.linkLine({ idToken })
+    await this.load()
+  }
+
+  async unlinkLine() {
+    await api.auth.unlinkLine()
+    await this.load()
+  }
+
   async changePassword(current: string, next: string) {
     await api.auth.changePassword({ current, next })
     await this.load()

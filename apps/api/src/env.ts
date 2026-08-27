@@ -53,9 +53,24 @@ const EnvSchema = z.object({
   NOTIFIER_ADAPTER: z.enum(['console', 'in_app', 'line']).default('console'),
   NOTIFIER_OUTBOX_PATH: z.string().default('./data/outbox.log'),
 
+  // LINE Login channel (LIFF). `LINE_CHANNEL_ID` is the audience an ID token
+  // must carry; without it no LINE login or link request is even attempted.
   LINE_CHANNEL_ID: z.string().optional(),
   LINE_CHANNEL_SECRET: z.string().optional(),
-  LINE_MESSAGING_TOKEN: z.string().optional()
+  /** Messaging API channel token — a *different* channel from LINE Login. */
+  LINE_MESSAGING_TOKEN: z.string().optional(),
+  LINE_API_BASE: z.string().default('https://api.line.me'),
+  LIFF_ID: z.string().optional(),
+
+  // Self-service reset. `console` writes the code to the outbox instead of
+  // sending it — the only adapter a dev machine or a test can use.
+  OTP_ADAPTER: z.enum(['console', 'sms', 'line']).default('console'),
+  OTP_TTL_MINUTES: z.coerce.number().int().min(1).max(30).default(10),
+  /** Returns the code in the API response. Refused in production. */
+  OTP_ECHO: boolish(false),
+  SMS_ENDPOINT: z.string().optional(),
+  SMS_API_KEY: z.string().optional(),
+  SMS_SENDER: z.string().default('PrisonCtr')
 })
 
 const DEV_SECRET = 'dev-only-secret-change-me-dev-only-secret-change-me'
@@ -72,6 +87,8 @@ function load() {
     if (env.JWT_SECRET === DEV_SECRET) throw new Error('JWT_SECRET is still the dev default')
     if (!env.COOKIE_SECURE) throw new Error('COOKIE_SECURE must be 1 in production')
     if (env.CORS_ORIGINS.length === 0) throw new Error('CORS_ORIGINS must be set in production')
+    // Echoing the OTP would turn "I know the phone number" into "I own it".
+    if (env.OTP_ECHO) throw new Error('OTP_ECHO must be off in production')
   }
 
   // `:memory:` is a SQLite magic value, not a path — tests rely on it surviving.

@@ -11,16 +11,22 @@ actually shipped: [`PHASE-0`](docs/PHASE-0.md) foundation,
 catalog and orders, [`PHASE-2`](docs/PHASE-2.md) payments,
 [`PHASE-3`](docs/PHASE-3.md) deposits, [`PHASE-4`](docs/PHASE-4.md) e-letters,
 [`PHASE-5`](docs/PHASE-5.md) visits,
-[`PHASE-6`](docs/PHASE-6.md) news, dashboard and reports.
+[`PHASE-6`](docs/PHASE-6.md) news, dashboard and reports,
+[`PHASE-7`](docs/PHASE-7.md) LINE and hardening. Operating the deployed system
+is [`RUNBOOK`](docs/RUNBOOK.md).
 
-**Status: Phase 6 (News + Dashboard + Reports) complete.** All seven p.12
-reports generate as real `.xlsx` files through the job queue — Thai headers, the
-filters that produced them, a generated-at stamp and bold totals — and download
-through the admin session. The four p.11 dashboard tiles count from the business
-tables at read time over a Bangkok-local period selector, with a daily chart and
-the work queues waiting on staff. Staff write ข่าวสาร in the dashboard, sanitized
-on write; relatives read it in the customer app without a session.
-Phase 7 (LINE + hardening) is not started.
+**Status: Phase 7 (LINE + hardening) complete — every phase in `Plan.md` has
+shipped.** A relative links a LINE identity onto the account they already have
+and logs in with an ID token afterwards; push rides on top of the in-app
+notifier as a queued job, so nothing waits on `api.line.me`. A forgotten
+password is recoverable without staff through a six-digit OTP that never
+reveals whether a number is registered. Every mutating route sits under a
+per-IP ceiling. The PDPA retention job reports what it would remove and removes
+nothing until the windows are signed off.
+
+What remains is operational, not code: stand up the VPS, run
+`docker/restore-drill.sh` against a real replica, and put a month of dry-run
+retention reports in front of the department before enabling the purge.
 
 ---
 
@@ -102,7 +108,7 @@ with: <http://localhost:8787/api/v1/openapi.json>. Health check:
 
 ```
 apps/api      Hono + Drizzle + SQLite. The only thing that touches the database.
-apps/liff     SvelteKit SPA (adapter-static) — relatives. Plain web now, LINE in Phase 7.
+apps/liff     SvelteKit SPA (adapter-static) — relatives. Plain web; LIFF only when line.liff_id is set.
 apps/admin    SvelteKit SPA (adapter-static) — prison staff.
 packages/contract  Zod schemas + typed fetch client shared by both front ends.
 packages/ui        Tailwind v4 theme + shared Svelte 5 components.

@@ -33,6 +33,8 @@ export const PublicSettings = z.object({
     maxChars: z.number().int(),
     maxAttachments: z.number().int()
   }),
-  features: z.object({ lineLogin: z.boolean() })
+  features: z.object({ lineLogin: z.boolean(), selfServiceReset: z.boolean() }),
+  /** `liffId` null = plain mobile web; the SDK is never loaded. */
+  line: z.object({ liffId: z.string().nullable() })
 })
 export type PublicSettings = z.infer<typeof PublicSettings>

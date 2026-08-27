@@ -34,6 +34,52 @@ export const SessionResponse = z.object({
 })
 export type SessionResponse = z.infer<typeof SessionResponse>
 
+/* ─── LINE (Phase 7) ─────────────────────────────────────────────────────── */
+
+/**
+ * The ID token comes from `liff.getIDToken()`. It is verified server-side
+ * against LINE's keys — the client is never trusted for the `sub`.
+ */
+export const LineTokenInput = z.object({
+  idToken: z.string().min(20).max(4096),
+  /** Echoed back from `liff.init`; proves the token was minted for this login. */
+  nonce: z.string().max(200).nullish()
+})
+export type LineTokenInput = z.infer<typeof LineTokenInput>
+
+export const LineLinkState = z.object({
+  lineLinked: z.boolean(),
+  lineDisplayName: z.string().nullable(),
+  linePictureUrl: z.string().nullable(),
+  lineLinkedAt: z.number().int().nullable()
+})
+export type LineLinkState = z.infer<typeof LineLinkState>
+
+/* ─── self-service password reset (Phase 7) ──────────────────────────────── */
+
+export const PasswordResetRequestInput = z.object({ phone: ThaiPhone })
+export type PasswordResetRequestInput = z.input<typeof PasswordResetRequestInput>
+
+/**
+ * Identical whether or not the number belongs to an account — this endpoint is
+ * not a membership oracle.
+ */
+export const PasswordResetChallenge = z.object({
+  reference: z.string(),
+  channel: z.enum(['sms', 'line', 'console']),
+  expiresIn: z.number().int(),
+  /** Dev only (OTP_ECHO); never present in production. */
+  code: z.string().optional()
+})
+export type PasswordResetChallenge = z.infer<typeof PasswordResetChallenge>
+
+export const PasswordResetVerifyInput = z.object({
+  reference: z.string().trim().min(4).max(16),
+  code: z.string().trim().regex(/^\d{6}$/, 'รหัสยืนยันต้องเป็นตัวเลข 6 หลัก'),
+  password: Password
+})
+export type PasswordResetVerifyInput = z.infer<typeof PasswordResetVerifyInput>
+
 export const VerifyStatus = z.enum(['pending', 'verified', 'rejected'])
 export type VerifyStatus = z.infer<typeof VerifyStatus>
 
@@ -63,6 +109,8 @@ export const MeResponse = z.object({
   phone: z.string(),
   lineIdText: z.string().nullable(),
   lineLinked: z.boolean(),
+  lineDisplayName: z.string().nullable(),
+  linePictureUrl: z.string().nullable(),
   mustChangePassword: z.boolean(),
   inmates: z.array(LinkedInmate),
   credits: z.array(CreditBalance)
