@@ -20,6 +20,8 @@ export const ErrorCode = {
   VALIDATION: 'VALIDATION',
   LOCKED_OUT: 'LOCKED_OUT',
   MUST_CHANGE_PASSWORD: 'MUST_CHANGE_PASSWORD',
+  /** The LINE account is genuine but no system account is linked to it. */
+  LINE_NOT_LINKED: 'LINE_NOT_LINKED',
   RATE_LIMITED: 'RATE_LIMITED',
   INTERNAL: 'INTERNAL'
 } as const

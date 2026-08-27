@@ -184,15 +184,22 @@ describe('week grid', () => {
 
   it('adds a manual cell, refuses a duplicate of it, and deletes it again', async () => {
     const staff = await staffClient()
-    const grid = (await staff.json(`${BASE}/admin/visit-schedule?from=${soon()}&to=${soon()}`)) as any
-    const date = addDays(soon(), 1)
-    const body = {
-      date,
-      roundId: grid.rounds[0].id,
-      zoneId: grid.zones[grid.zones.length - 1].id,
-      capacity: 5,
-      note: 'รอบเสริม'
-    }
+    const week = (await staff.json(
+      `${BASE}/admin/visit-schedule?from=${soon()}&to=${addDays(soon(), 6)}`
+    )) as any
+    const roundId = week.rounds[0].id
+    const zoneId = week.zones[week.zones.length - 1].id
+    // The template already materialized most of the week; pick a day that has
+    // no cell for this round+zone, or the "add" under test is a duplicate and
+    // the case depends on which weekday the suite happens to run.
+    const taken = new Set(
+      week.cells.map((c: any) => `${c.date}|${c.roundId}|${c.zoneId}`)
+    )
+    const date = [...Array(7).keys()]
+      .map((i) => addDays(soon(), i))
+      .find((d) => !taken.has(`${d}|${roundId}|${zoneId}`))!
+    expect(date, 'the seeded week has no free cell to add').toBeDefined()
+    const body = { date, roundId, zoneId, capacity: 5, note: 'รอบเสริม' }
 
     const created = (await staff.json(`${BASE}/admin/visit-schedule`, { method: 'POST', json: body })) as any
     expect(created.source).toBe('manual')

@@ -1,5 +1,6 @@
 import { db } from '../../db/client.js'
 import { env } from '../../env.js'
+import { createLineNotifier } from '../line/notifier.js'
 import { createConsoleNotifier } from './console.js'
 import { createInAppNotifier } from './in-app.js'
 import type { Notification, NotifierAdapter } from './types.js'
@@ -12,7 +13,12 @@ export function notifier(): NotifierAdapter {
   if (instance) return instance
   const e = env()
   const inApp = createInAppNotifier(db, e.NOTIFIER_ADAPTER === 'line' ? 'line' : 'in_app')
-  instance = e.NOTIFIER_ADAPTER === 'console' ? createConsoleNotifier(e.paths.outbox, inApp) : inApp
+  instance =
+    e.NOTIFIER_ADAPTER === 'console'
+      ? createConsoleNotifier(e.paths.outbox, inApp)
+      : e.NOTIFIER_ADAPTER === 'line'
+        ? createLineNotifier(inApp, db)
+        : inApp
   return instance
 }
 

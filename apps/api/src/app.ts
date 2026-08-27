@@ -36,6 +36,8 @@ import { createAdminReportRoutes } from './modules/reports/admin-routes.js'
 import { createAdminVisitRoutes } from './modules/visits/admin-routes.js'
 import { createAdminRoutes } from './modules/admin/routes.js'
 import { createAdminSettingsRoutes, createPublicSettingsRoutes } from './modules/settings/routes.js'
+import { createAdminPdpaRoutes } from './modules/pdpa/admin-routes.js'
+import { globalWriteLimit } from './middleware/rate-limit.js'
 import type { AppEnv } from './types.js'
 
 export const API_PREFIX = '/api/v1'
@@ -69,6 +71,10 @@ export function createApp() {
 
   const api = new OpenAPIHono<AppEnv>({ defaultHook })
 
+  // The floor under every mutating route. Login and OTP declare tighter
+  // budgets of their own on top of this.
+  api.use('*', globalWriteLimit)
+
   /* customer realm */
   api.route(
     '/auth',
@@ -76,7 +82,8 @@ export function createApp() {
       spec: customerRealm,
       provider: customerPasswordProvider,
       tag: 'auth',
-      allowRegister: true
+      allowRegister: true,
+      lineAndReset: true
     })
   )
   api.route('/me', createMeRoutes())
@@ -117,6 +124,7 @@ export function createApp() {
   api.route('/admin', createAdminVisitRoutes())
   api.route('/admin', createAdminNewsRoutes())
   api.route('/admin', createAdminReportRoutes())
+  api.route('/admin', createAdminPdpaRoutes())
   api.route('/admin', createAdminRoutes())
 
   app.route(API_PREFIX, api)

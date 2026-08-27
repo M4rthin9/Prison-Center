@@ -1,5 +1,15 @@
 import { OpenAPIHono, createRoute } from '@hono/zod-openapi'
-import { ChangePasswordInput, LoginInput, RegisterInput, SessionResponse } from '@pc/contract'
+import {
+  ChangePasswordInput,
+  LineLinkState,
+  LineTokenInput,
+  LoginInput,
+  PasswordResetChallenge,
+  PasswordResetRequestInput,
+  PasswordResetVerifyInput,
+  RegisterInput,
+  SessionResponse
+} from '@pc/contract'
 import type { AppEnv } from '../../types.js'
 import { db } from '../../db/client.js'
 import {
@@ -16,8 +26,10 @@ import {
 import { unauthorized } from '../../lib/errors.js'
 import { bearerAuth, commonErrors, jsonBody, jsonRes } from '../../lib/openapi.js'
 import { requireCustomer, requireStaff } from '../../middleware/auth.js'
-import { LOGIN_POLICY, rateLimit } from '../../middleware/rate-limit.js'
+import { LINE_POLICY, LOGIN_POLICY, rateLimit } from '../../middleware/rate-limit.js'
 import { changePassword, login, registerCustomer } from './service.js'
+import { lineLogin, linkLineAccount, unlinkLineAccount } from './line.js'
+import { completePasswordReset, requestPasswordReset } from './reset.js'
 import { defaultHook } from '../../lib/hook.js'
 
 const toBody = (s: IssuedSession) => ({
@@ -36,6 +48,8 @@ export function createAuthRoutes(opts: {
   provider: AuthProvider
   tag: string
   allowRegister: boolean
+  /** LINE login/link and OTP reset are customer-realm only. */
+  lineAndReset?: boolean
 }) {
   const { spec, provider, tag } = opts
   const app = new OpenAPIHono<AppEnv>({ defaultHook })
@@ -137,6 +151,95 @@ export function createAuthRoutes(opts: {
       return c.json(toBody(session), 200)
     }
   )
+
+  if (opts.lineAndReset) {
+    app.use('/line/*', rateLimit('line', LINE_POLICY))
+
+    app.openapi(
+      createRoute({
+        method: 'post',
+        path: '/line/login',
+        tags: [tag],
+        summary: 'เข้าสู่ระบบด้วย LINE',
+        description:
+          'ตรวจสอบ ID token กับกุญแจของ LINE แล้วออกเซสชันรูปแบบเดียวกับการเข้าสู่ระบบด้วยรหัสผ่าน ' +
+          'หากบัญชี LINE ยังไม่ได้เชื่อมกับผู้ใช้ จะได้รับรหัส LINE_NOT_LINKED',
+        request: { body: jsonBody(LineTokenInput) },
+        responses: { 200: jsonRes(SessionResponse, 'เข้าสู่ระบบสำเร็จ'), ...commonErrors }
+      }),
+      async (c) => {
+        const session = await lineLogin(c.req.valid('json'), requestContext(c))
+        setRefreshCookie(c, spec, session.refreshToken)
+        return c.json(toBody(session), 200)
+      }
+    )
+
+    app.use('/line/link', guard)
+    app.openapi(
+      createRoute({
+        method: 'post',
+        path: '/line/link',
+        tags: [tag],
+        summary: 'เชื่อมบัญชี LINE กับบัญชีที่เข้าสู่ระบบอยู่',
+        security: bearerAuth,
+        request: { body: jsonBody(LineTokenInput) },
+        responses: { 200: jsonRes(LineLinkState, 'เชื่อมบัญชีแล้ว'), ...commonErrors }
+      }),
+      async (c) => {
+        const principal = c.get('customer')
+        if (!principal) throw unauthorized()
+        const state = await linkLineAccount(principal.id, c.req.valid('json'), requestContext(c))
+        return c.json(state, 200)
+      }
+    )
+
+    app.openapi(
+      createRoute({
+        method: 'delete',
+        path: '/line/link',
+        tags: [tag],
+        summary: 'ยกเลิกการเชื่อมบัญชี LINE',
+        description: 'บัญชียังใช้เบอร์มือถือและรหัสผ่านเข้าสู่ระบบได้ตามเดิม',
+        security: bearerAuth,
+        responses: { 200: jsonRes(LineLinkState, 'ยกเลิกการเชื่อมแล้ว'), ...commonErrors }
+      }),
+      async (c) => {
+        const principal = c.get('customer')
+        if (!principal) throw unauthorized()
+        return c.json(unlinkLineAccount(principal.id, requestContext(c)), 200)
+      }
+    )
+
+    app.openapi(
+      createRoute({
+        method: 'post',
+        path: '/password-reset/request',
+        tags: [tag],
+        summary: 'ขอรหัสยืนยันเพื่อตั้งรหัสผ่านใหม่',
+        description:
+          'คำตอบเหมือนกันทุกกรณี ไม่ว่าเบอร์นั้นจะมีบัญชีอยู่หรือไม่ — เพื่อไม่ให้ใช้ตรวจสอบว่าเบอร์ใดลงทะเบียนไว้',
+        request: { body: jsonBody(PasswordResetRequestInput) },
+        responses: { 200: jsonRes(PasswordResetChallenge, 'ส่งรหัสยืนยันแล้ว'), ...commonErrors }
+      }),
+      async (c) => c.json(await requestPasswordReset(c.req.valid('json'), requestContext(c)), 200)
+    )
+
+    app.openapi(
+      createRoute({
+        method: 'post',
+        path: '/password-reset/verify',
+        tags: [tag],
+        summary: 'ยืนยันรหัสและตั้งรหัสผ่านใหม่',
+        description: 'ทุกเซสชันเดิมของบัญชีนี้จะถูกยกเลิก แล้วให้เข้าสู่ระบบใหม่ด้วยรหัสผ่านที่ตั้ง',
+        request: { body: jsonBody(PasswordResetVerifyInput) },
+        responses: { 204: { description: 'ตั้งรหัสผ่านใหม่แล้ว' }, ...commonErrors }
+      }),
+      async (c) => {
+        await completePasswordReset(c.req.valid('json'), requestContext(c))
+        return c.body(null, 204)
+      }
+    )
+  }
 
   return app
 }

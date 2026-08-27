@@ -7,6 +7,8 @@ export type AuthFailure =
   | { ok: false; reason: 'invalid_credentials' }
   | { ok: false; reason: 'locked_out'; retryAfterSec: number }
   | { ok: false; reason: 'blocked' }
+  /** LINE only: the token is valid but no account claims that `line_user_id`. */
+  | { ok: false; reason: 'not_linked' }
 
 export type AuthSuccess = { ok: true; userId: string; user: AuthUser }
 export type AuthResult = AuthSuccess | AuthFailure

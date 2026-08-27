@@ -7,7 +7,7 @@
 
   let { children } = $props()
 
-  const PUBLIC_ROUTES = ['/login', '/register']
+  const PUBLIC_ROUTES = ['/login', '/register', '/forgot-password']
 
   $effect(() => {
     void session.boot()

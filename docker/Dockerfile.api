@@ -25,6 +25,10 @@ RUN pnpm --filter @pc/contract build
 
 FROM base AS runtime
 WORKDIR /app
+# `sqlite3` is for operators, not the app: every runbook check reads the
+# database through it. Litestream deliberately stays out — a restore tool
+# inside the container that holds the write lock is a foot-gun.
+RUN apt-get update && apt-get install -y --no-install-recommends sqlite3   && rm -rf /var/lib/apt/lists/*
 ENV NODE_ENV=production
 COPY --from=build /app ./
 RUN chmod -R 777 /app

@@ -17,6 +17,7 @@
     { href: '/customers/verify', label: 'คำขอผูกบัญชี', icon: '✅', superOnly: false },
     { href: '/customers', label: 'บัญชีญาติ', icon: '👥', superOnly: false },
     { href: '/staff', label: 'เจ้าหน้าที่', icon: '🛡️', superOnly: true },
+    { href: '/pdpa', label: 'ลบข้อมูลตามระยะเวลา', icon: '🗑️', superOnly: true },
     { href: '/settings', label: 'ตั้งค่าระบบ', icon: '⚙️', superOnly: false }
   ]
 

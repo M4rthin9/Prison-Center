@@ -9,6 +9,7 @@ export type ErrorCode =
   | 'VALIDATION'
   | 'LOCKED_OUT'
   | 'MUST_CHANGE_PASSWORD'
+  | 'LINE_NOT_LINKED'
   | 'RATE_LIMITED'
   | 'INTERNAL'
 
@@ -21,6 +22,7 @@ const STATUS: Record<ErrorCode, ContentfulStatusCode> = {
   VALIDATION: 422,
   LOCKED_OUT: 423,
   MUST_CHANGE_PASSWORD: 403,
+  LINE_NOT_LINKED: 404,
   RATE_LIMITED: 429,
   INTERNAL: 500
 }

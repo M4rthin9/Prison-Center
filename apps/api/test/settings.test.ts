@@ -155,8 +155,8 @@ describe('jobs queue', () => {
     const { jobs } = await import('../src/db/schema/index.js')
     const { eq } = await import('drizzle-orm')
 
-    // `pdpa.retention` is declared as a job kind but lands in Phase 7.
-    const id = enqueue('pdpa.retention', {}, { maxAttempts: 1, db: db() })
+    // `order.cutoff_notify` is declared as a job kind but has no handler yet.
+    const id = enqueue('order.cutoff_notify', {}, { maxAttempts: 1, db: db() })
     await drainJobs()
 
     const row = db().select().from(jobs).where(eq(jobs.id, id)).get()

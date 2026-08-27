@@ -178,6 +178,12 @@ export function publicSettings(opts: { prisonId?: string | null; db?: Db } = {})
       maxChars: g('letter.max_chars'),
       maxAttachments: g('letter.max_attachments')
     },
-    features: { lineLogin: g('features.line_login') }
+    features: {
+      lineLogin: g('features.line_login'),
+      selfServiceReset: g('features.self_service_reset')
+    },
+    // The LIFF id the customer app needs to boot the SDK. Null means the app
+    // runs as an ordinary mobile web page, exactly as it did in Phases 0–6.
+    line: { liffId: g('line.liff_id') }
   }
 }
