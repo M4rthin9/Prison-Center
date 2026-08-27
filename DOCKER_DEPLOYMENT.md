@@ -211,7 +211,7 @@ curl http://localhost:18787/api/v1/openapi.json | head -20
 
 ```yaml
 api:
-  image: ghcr.io/<owner>/prison-api:latest
+  image: cidabumbadklang/prison-api:latest
   # Remove build section
 ```
 

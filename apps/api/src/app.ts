@@ -3,6 +3,7 @@ import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 import { secureHeaders } from 'hono/secure-headers'
 import { serveStatic } from '@hono/node-server/serve-static'
+import fs from 'node:fs'
 import path from 'node:path'
 import { env } from './env.js'
 import { onError, onNotFound } from './middleware/error.js'
@@ -131,6 +132,10 @@ export function createApp() {
 
   // Local storage adapter serves uploads directly; in production Caddy does it.
   if (e.STORAGE_ADAPTER === 'local') {
+    // serveStatic resolves `root` once, at registration. On a fresh volume the
+    // adapter has not written anything yet, so the directory has to exist here
+    // or every /files/* request 404s until the first upload creates it.
+    fs.mkdirSync(e.paths.uploads, { recursive: true })
     const rel = path.relative(process.cwd(), e.paths.uploads).split(path.sep).join('/')
     app.use(
       `${e.STORAGE_PUBLIC_PATH}/*`,
